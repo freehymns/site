@@ -1,0 +1,4 @@
+#leftpane {display:none; position:fixed; left:0; top:0; width: 22em; height: 100vh}
+#leftpane iframe {display:none; position:absolute; top:0; left:0; width: 22em; height: 100vh}
+#home {text-align:center}
+#home ul {display:inline-block; text-align:left}

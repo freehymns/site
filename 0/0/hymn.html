@@ -1,0 +1,169 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1" />
+<link rel="stylesheet" href="../../hymn.css">
+<link rel="icon" href="../../favicon.png">
+<script src="../../abc2svg/abcweb-1.js?"></script>
+<script src="../../abc2svg/snd-1.js?"></script>
+<script src="../../NoSleep.min.js"></script>
+<script src="../../hymn.js?"></script>
+<script>
+//data.textID = "";
+//data.musicID = "";
+</script>
+<title>Hymn Title</title>
+</head>
+<body onload="page_loaded()" onresize="resize()" onkeydown="keyDown(window.event)">
+<pre id="xtext_data" style="display:none"></pre>
+<div id="xmusic_data" style="display:none"></div>
+<div id="col1" class="nop">
+<div id="col1_top"><div id="col1_site_icon" class="site_icon" onclick="go_home()" title="Go to home page"></div> <span id="col1_title">Title Index</span> <div class="close_icon" onclick="close_col1()"></div></div>
+<iframe id="indexframe" frameborder="0" src="../../titles.html" style="display:none"></iframe>
+</div>
+<div id="col2" class="nop">
+<div id="col2_top"><div id="col2_site_icon" class="site_icon" onclick="go_home()" title="Go to home page"></div> <span id="col2_title">He Arose</span> <div id="close_menu" class="close_icon" onclick="close_col2()"></div></div>
+<div id="col2_contents">
+<div id="col2_arrow"><span class="nav" onclick="show_col1()" title="Show index pane"><b>&#8656;</b> index</span></div>
+<div id="text_title" class="tree_title"><span onclick="toggle_tree_node()"><span>&ndash;</span> <span>Text</span></span></div>
+<div id="text_node" class="tree_node">
+ <div id="text_metadata_title" class="tree_title"><span onclick="toggle_tree_node()"><span>&ndash;</span> <span>Properties</span></span></div>
+ <div id="text_metadata_node" class="tree_node">
+  <div class="metadata_frame">
+   <table id="text_metadata_table" class="metadata_table">
+    <!--<tr><th>Author:</th><td>William C. Martin (1914)</td></tr>
+    <tr><th>Topics:</th><td>Easter</td></tr>
+    <tr><th>Terms:</th><td>Public Domain</td></tr>-->
+   </table>
+  </div>
+ </div>
+ <div id="text_variants_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Variants</span></span></div>
+ <div id="text_variants_node" class="tree_node" style="display:none">
+   <table id="text_variants_table">
+   </table>
+   <span id="text_variants_none">No variants available for this hymn.</span>
+ </div>
+ <input type="button" value="View Hymn Text" onclick="changeView('text')"> (words only)
+</div>
+<div id="music_title" class="tree_title"><span onclick="toggle_tree_node()"><span>&ndash;</span> <span>Music</span></span></div>
+<div id="music_node" class="tree_node">
+ <div id="music_metadata_title" class="tree_title"><span onclick="toggle_tree_node()"><span>&ndash;</span> <span>Properties</span></span></div>
+ <div id="music_metadata_node" class="tree_node">
+  <div class="metadata_frame">
+   <table id="music_metadata_table" class="metadata_table">
+   <!--<tr><th>Tune Title:</th><td>He Arose</td></tr>
+   <tr><th>Tune Title:</th><td></td><td>He Arose</td></tr>
+   <tr><th>Composer:</th><td></td><td>J. M. Copeland</td></tr>
+   <tr><th>Meter:</th><td></td><td>11,6,11,6+6,6,11,6</td></tr>
+   <tr><th>Terms:</th><td></td><td>Public Domain</td></tr>
+   <tr><th>Transcription:</th><td>&ndash;</td><td></td></tr>
+   <tr style="display:none"><td colspan="3"></td></tr>
+   <tr><td colspan="3">Converted from the Cyber Hymnal(tm) on 2026-03-11 using translator\nwctxt2abc.py</td></tr>
+   <tr><th>Source:</th><td>+</td><td><div>Sing to the Lord (Kansas City, Missouri: Lillenas Publishing, 1984), # 360. Also in Hymns of Faith (Wheaton, Illinois: Tabernacle Publishing, 1980), # 205.</div></td></tr>-->
+   </table>
+  </div>
+ </div>
+ <div id="music_arrangements_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Arrangements</span></span></div>
+ <div id="music_arrangements_node" class="tree_node" style="display:none">
+  <table id="music_arrangements_table">
+   <!--<tr><td><input type="radio" checked="checked"></td><td>AwayInAMangerKirkpatrick</td></tr>-->
+  </table>
+  <span id="music_other_arrangements_none">No other arrangements available for this tune.</span>
+ </div>
+ <div id="music_alt_tunes_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Alternate Tunes</span></span></div>
+ <div id="music_alt_tunes_node" class="tree_node" style="display:none">
+  <table id="music_alt_tunes_table">
+  </table>
+  <span id="music_alt_tunes_none">No alternate tunes known for this hymn.</span>
+ </div>
+ <input type="button" value="View Music" onclick="changeView('score', getElementById('music_words').value)"> <select id="music_words" value="none"><option value="none">without note codes</option><option value="codes">with note codes</option></select>
+</div>
+<div id="score_title" class="tree_title"><span onclick="toggle_tree_node()"><span>&ndash;</span> <span>Score (words and music)</span></span></div>
+<div id="score_node" class="tree_node">
+ <div id="score_verses_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Verses</span></span></div>
+ <div id="score_verses_node" class="tree_node" style="display:none">
+  <table id="score_verses_table">
+   <!--<tr><th>1.</th><td><select value="Show"><option>Show in score</option><option>Show after score</option><option>Hide</option><option>Remove</option></select></td></tr>
+   <tr><th>2.</th><td><select value="Show"><option>Show in score</option><option>Show after score</option><option>Hide</option><option>Remove</option></select></td></tr>
+   <tr><th>3.</th><td><select value="Show"><option>Show in score</option><option>Show after score</option><option>Hide</option><option>Remove</option></select></td></tr>
+   <tr><th>4.</th><td><select value="Show"><option>Show in score</option><option>Show after score</option><option>Hide</option><option>Remove</option></select></td></tr>-->
+  </table>
+ </div>
+ <div id="score_spacing_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Word Spacing</span></span></div>
+ <div id="score_spacing_node" class="tree_node" style="display:none">
+  <select id="word_spacing" onChange="changeWordSpacing()"><option value="normal">Normal</option><option value="less">Less space</option><option value = "more">More space</option></select></td></tr>
+ </div>
+ <div style="display:none" id="score_transpose_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Transpose</span></span></div>
+ <div id="score_transpose_node" class="tree_node" style="display:none">
+  <select id="transpose_dir" onchange="fill_transpose_steps(window.event)"><option>Up</option><option>Down</option></select> <select id="transpose_steps"></select>
+ </div>
+ <input type="button" value="View Score" onclick="changeView('score', 'hymn')"> <input type="button" value="View Presentation" onclick="changeView('presentation')">
+</div>
+<!--
+<div id="present_title" class="tree_title"><span onclick="toggle_tree_node()"><span>&ndash;</span> <span>Present</span></span></div>
+<div id="present_node" class="tree_node">
+ <input type="button" value="View Presentation" onclick="updateView('presentation')">
+</div>
+-->
+<div id="performance_title" class="tree_title"><span onclick="toggle_tree_node()"><span>&ndash;</span> <span>Performance</span></span></div>
+<div id="performance_node" class="tree_node">
+ <div id="performance_plan_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Plan (Road map)</span></span></div>
+ <div id="performance_plan_node" class="tree_node" style="display:none">
+   <div><input id="pp_radio_default" type="radio" name="pp_type" value="default" checked="checked" onchange="changePerformancePlan()"/> <b>Default Plan:</b> <span id="pp_default_span"></span></div>
+   <div><input id="pp_radio_custom" type="radio" name="pp_type" value="custom" onchange="changePerformancePlan()"/> <b>Custom Plan:</b> <span id="pp_custom_span">0</span> <input type="button" value="Edit" onclick="get_custom_pp()"></div>
+ </div>
+ <div id="dynamics_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Dynamics</span></span></div>
+ <div id="dynamics_node" class="tree_node" style="display:none">
+  <span id="tempo_span">Tempo: &#9833; = <span id="tempo_value"></span>
+  <span class="pressable" title="Faster (Shift + Up Arrow)" onclick="changeTempo(1)">&#9650;</span>
+  <span class="pressable" style="margin-left:-3px" title="Slower (Shift + Down Arrow)" onclick="changeTempo(-1)">&#9660;</span>
+ </div>
+ <input id="play_pause_resume" type="button" value="Play" onclick="play_pause_resume()">
+ <input id="reset" type="reset" value="Stop" onclick="resetMusic()">
+</div>
+<br>
+<br>
+<br>
+</div>
+</div>
+<div id="col3">
+<div id="col3_top">
+<div id="col3_site_icon" class="nav" onclick="go_home()" title="Go to home page"><div class="site_icon"></div> home</div>
+<div id="col3_double_arrow" class="nav" onclick="show_col1()" title="Show index pane"><span><b>&#8656;</b><b style="margin-left: -.5em">&#8656;</b></span> index</div>
+<div id="col3_arrow" class="nav" onclick="show_col2()" title="Show hymn information pane"><b>&#8656;</b> info</div>
+</div>
+<div id="score_view" style="display:none">
+<br class="nop">
+<br class="nop">
+<div id="score_view_main"><!--type="text/vnd.abc"--></div>
+<div id="score_view_end_words"></div>
+<div id="score_view_footer"><a class="site_link" href="../..">freehymns.org</a><br></div>
+</div>
+<div id="text_view" style="display:none">
+<div id="text_block"></div>
+<br>
+<br>
+<div id="text_view_footer"><a class="site_link" href="../..">freehymns.org</a><br><a href="#">&#65039;</a><br></div>
+</div>
+<div id="presentation_view" style="display:none">
+<div id="present_header">
+ <span id="present_title"></span>
+</div>
+<div id="present_main"></div>
+<div id="present_footer"></div>
+</div>
+<div id="mobile_controls" style="display:none">
+ <span id="trigram" onclick="toggle_mobile_menu()">&#9776;</span>
+ <div id="mobile_menu" style="display:none">
+  <span id="play_pause_resume_link" onclick="play_pause_resume()">Play</span> <i id="play_pause_resume_shortcut">(Spacebar)</i><br>
+  <span onclick="resetMusic()">Stop</span> <i id="reset_shortcut">(Esc)</i><br>
+  <hr>
+  <span onclick="show_hymn_details()">Info</span> <i id="info_shortcut">(Esc)</i><br>
+  <span onclick="show_col1()">Index</span><br>
+  <span onclick="go_home()" title="Back to hymn info.">Home</span><br>
+ </div>
+</div>
+</div>
+</body>
+</html>
