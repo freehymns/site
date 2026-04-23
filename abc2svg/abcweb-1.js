@@ -258,11 +258,12 @@ Printing may be bad because the file contains pure HTML and %%pageheight\
 		// get the global parameters
 		if (abc2svg.music == null)
 		abc2svg.music = [{
-			t: "",			// global parameters
+			t: "%% _\n",	// global parameters
 			n: "mus0"
 		}]
 
 		// get the parameters from the query string of the URL
+		t = abc2svg.music[0].t
 		if (!abc2svg.skipQueryParams) {
 			k = location.search
 			if (k) {
@@ -631,8 +632,9 @@ function clean_txt(txt) {
 	// load the abc2svg core if not done by <script>
 	src = document.body.innerHTML
 	if (!abc2svg.Abc) {
-		abc2svg.loadjs("abc2svg-1.js", dom_loaded)
-		return
+		//abc2svg.loadjs("abc2svg-1.js", dom_loaded)
+		console.log("abc2svg-1.js must be loaded first")
+		//return
 	}
 
 	// create a hidden span for string width computation
@@ -718,4 +720,4 @@ abc2svg.set_music = function(d, t) {
 } // set_music()
 
 // wait for the scripts to be loaded
-window.addEventListener("load", dom_loaded, {once:true})
+//window.addEventListener("load", dom_loaded, {once:true})

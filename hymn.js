@@ -61,6 +61,7 @@ const RADIO_VALUE_LIMIT = 32;
 
 const NULL_ABC = "X:1\nK:C\nV:1\nz";
 
+const BOTS = [/bot/i,/spider/i,/crawler/i,/Google-InspectionTool/,/GoogleOther/,/Slurp/,/Teoma/,/speedy/,/Qwantify/,/Seekport/,/search\.marginalia\.nu/,/webzio\s/,/GeedoProductSearch/];
 
 const KEY_TABLE = [
 	{accidentals:0, steps:0, major: "C", minor: "A"},
@@ -103,58 +104,35 @@ var Presentation_view;
 var Present_header;
 var Present_main;
 var Present_footer;
-//var Left_arrow;
 var Tempo_value
 var Play_pause_resume;
 var Reset;
-//var Trigram;
 var Indexframe;
 
 var Col1_top_rect;
-//var Col2_top_rect;
 var Col1_width;
-//var Col2_width;
 var ColSpacer_width;
 
 var KeyboardDetected = false;
+var BotDetected = false;
 
 var Pagesize;
-//var Verses;
-var View;
+var View = TEXT;
 
 var tempo = 100;
-var col1_dismissed = false;
-var col2_dismissed = false;
+var col1_dismissed = true;
+var col2_dismissed = true;
 var col3_dismissed = false;
 var nextPlayStepScheduled = false;
 var end_svg = null;
 var plan_remaining = "";
 var playing = false;
-//var part_playing = null;
-//var maxMusicHeight = 0;
 //var wakelock = null;
 
 var abc_seq = 1;
 
 var fully_loaded = false;
-/*
-function space_for_2_cols() {
-	return (window.innerWidth >= 600);
-}
 
-function space_for_3_cols() {
-	return (window.innerWidth >= 1200);
-}
-
-function space_for_score() {
-	if (col1_dismissed && col2_dismissed) {
-		return true;
-	} else if (col1_dismissed) {
-		return (window.innerWidth >= 1200)
-	}
-	return (window.innerWidth >= 1200);
-}
-*/
 function space_for_cols(_col1_dismissed, _col2_dismissed, _col3_dismissed, _view) {
 	if (_col1_dismissed && _col2_dismissed && _col3_dismissed) {
 		return true;
@@ -448,10 +426,6 @@ function parse_text_data() {
 				if (cleanLine.charAt(j) == "_" && "_ ".indexOf(cleanLine.charAt(j+1)) < 0) {
 					cleanLine = cleanLine.substring(0, j+1) + " " + cleanLine.substring(j+1);
 				}
-				//if (j > 1 && cleanLine.charAt(j) == "=" && cleanLine.charAt(j-1) != "\\") {
-				//	cleanLine = cleanLine.substring(0, j) + " " + cleanLine.substring(j);
-				//	j++;
-				//}
 			}
 			var words = cleanLine.split(" ");
 			var underscores = 0;
@@ -603,23 +577,7 @@ function parse_text_data() {
 		opts.versesShown[i] = IN_SCORE;
 	}
 }
-/*
-function get_tune(div) {
-	if (abc2svg.abc != null && abc2svg.abc.tunes != null) {
-		for (var i = 0; i < abc2svg.abc.tunes.length; i++) {
-			if (abc2svg.abc.tunes[i] != null) {
-				var svgs = div.getElementsByTagName("svg");
-				for (var j = 0; j < svgs.length; j++) {
-					if (svgs[j].className.baseVal.indexOf("tune" + i) >= 0) {
-						return i;
-					}
-				}
-			}
-		}
-	}
-	return null;
-}
-*/
+
 function get_tune(div) {
 	var svgs = div.getElementsByTagName("svg");
 	for (var j = 0; j < svgs.length; j++) {
@@ -633,7 +591,6 @@ function get_tune(div) {
 }
 
 function set_music(div, music) {
-	//console.log("enter set_music");
 	var child = div.getElementsByTagName("div")[0];
 	var tune = get_tune(div);
 	if (tune != null) {
@@ -642,25 +599,16 @@ function set_music(div, music) {
 		}
 	}
     abc2svg.set_music(child, music);
-	//dom_loaded();
-	//var new_tune = get_tune(div);
-	//console.log("set_music " + div.id + " old=" + tune + " new=" + new_tune + " prepare=" + prepare);
-	//abc2svg.abc.tunes[tune] = null;
-	/*
-	if (true || prepare) {
-		//prepare_music(child);
-		prepare_music(div);
-		//setTimeout(function() {prepare_music(div)}, 25);
-	}
-	*/
 }
 
-function prepare_music(div) {
-	//console.log("enter prepare_music");
+function prepare_music(div, tryno) {
+	if (tryno > 20) {
+		console.log("prepare_music failed");
+		return;
+	}
 	var tune = get_tune(div);
 	if (tune == null) {
-		//console.log("tune is null");
-		setTimeout(function() {prepare_music(div)}, 25);
+		setTimeout(prepare_music, 25, div, (tryno == null ? 1 : tryno + 1));
 		return;
 	}
 	
@@ -777,7 +725,6 @@ function prepare_music(div) {
 		var code = letter + dot + n;
 		var start = data.raw_music.indexOf("\nV:" + v);
 		if (start > 0) {
-			//start = data.raw_music.indexOf("\nw:");
 			start = data.raw_music.indexOf("\nw:" + code, start);
 			if (start > 0) {
 				start += 3 + code.length;
@@ -897,12 +844,6 @@ function toggleProperty() {
 		} else {
 			field = th.title + ":";
 		}
-		//if (th.title == null || th.title.length == 0) {
-			//while (div.firstChild != null) {
-			//	div.removeChild(div.firstChild);
-			//}
-			//td1.innerHTML = NDASH;
-		//} else {
 		while (tr.firstChild != null) {
 			tr.removeChild(tr.firstChild);
 		}
@@ -1454,10 +1395,14 @@ function replace_words(music, new_words, wordSpacing) {
 	return new_music;
 }
 
-function layoutMusic() {
+function layoutMusic(tryno) {
+	if (tryno > 20) {
+		console.log("layoutMusic failed");
+		return;
+	}
     if (abc2svg.music == null || data.preprocessed_music == null) {
-	  setTimeout(layoutMusic, 10);
-	  return;
+		setTimeout(layoutMusic, 10, (tryno == null ? 1 : tryno + 1));
+		return;
     }
 	
 	var layout_music = "";
@@ -1480,7 +1425,6 @@ function layoutMusic() {
 			}
 		}
 		new_line += lines[i].substring(bar);
-		//new_line = new_line.replaceAll("!sp2!y", (DEBUG_LAYOUT ? "|" : "!invisible!|"));
 		new_line = new_line.replaceAll("!sp2!y", "|");
 		layout_music += new_line + "\n"
 	  } else if (lines[i].length > 0) {
@@ -1492,16 +1436,18 @@ function layoutMusic() {
 	//console.log(layout_music);
 
 	var div = document.getElementById("score_view_main");
-	//abc2svg.set_music(div.getElementsByTagName("div")[0], layout_music);
 	set_music(div, layout_music);
 }
 
-function loadMusic() {
-	//console.log("loadMusic");
+function loadMusic(tryno) {
+	if (tryno > 20) {
+		console.log("loadMusic failed");
+		return;
+	}
 	var div = document.getElementById("score_view_main");
 	var tune = get_tune(div);
 	if (tune == null) {
-		setTimeout(loadMusic, 25);
+		setTimeout(loadMusic, 25, (tryno == null ? 1 : tryno + 1));
 		return;
 	}
 	
@@ -1566,7 +1512,6 @@ function loadMusic() {
 	}
 	var svgs = div.getElementsByTagName("svg");
 	if (svgs.length > 0) {
-		//var svg_rect = svgs[0].getBoundingClientRect();
 		Pagesize = parseInt(svgs[0].getAttribute("width").replace("px", "")) + 50;
 	}
 	
@@ -1617,15 +1562,6 @@ function loadMusic() {
 		end_words_div.appendChild(document.createElement("br"));
 	}
 
-/*	
-	if (Roadmap == null) {
-	  Roadmap = "V1";
-	  for (var i = 2; i <= data.verseCount; i++) {
-	    Roadmap += ";V" + i;
-	  }
-	}
-*/
-
 	var present_music = data.processed_music.replaceAll("I:linebreak $", "I:linebreak <none>").replaceAll(" $", " ");
 	
 	Present_main.style.transform = "";
@@ -1655,7 +1591,6 @@ function loadMusic() {
 	  }
 	  //console.log(v + ": " + new_music)
 	  var div2 = div.getElementsByTagName("div")[0];
-      //abc2svg.set_music(div2, new_music);
 	  set_music(div, new_music);
 	  if (opts.wordsShown == HYMN) {
 		prepare_music(div);
@@ -1703,37 +1638,33 @@ function page_loaded() {
 	
     Col1_top_rect = Col1_top.getBoundingClientRect();
     Col1_width = Col1_top_rect.right;
-    //Col2_top_rect = Col2_top.getBoundingClientRect();
-    //Col2_width = Col2_top_rect.right - Col2_top_rect.left;
-    //ColSpacer_width = Col2_top_rect.left - Col1_width;
 	ColSpacer_width = Col2_top.getBoundingClientRect().left - Col1_width;
 
-    col1_dismissed = !space_for_cols(false, false, false, TEXT);
-	col3_dismissed = !space_for_cols(col1_dismissed, false, false, TEXT);
-
-	View = (space_for_cols(col1_dismissed, false, col3_dismissed, SCORE) ? SCORE : TEXT);
-  
-/*
-  var view = null;
-  var index = null;
-  var a = [document.cookie, window.location.href];
-  for (var i=0; i<2; i++) {
-    if (a[i].indexOf("view=" + TEXT) >= 0) {
-      view = TEXT;
-    } else if (a[i].indexOf("view=" + SCORE) >= 0) {
-      view = SCORE;
-    } else if (a[i].indexOf("view=" + PRESENTATION) >= 0) {
-      view = PRESENTATION;
-    } else if (a[i].indexOf("index=") >= 0) {
-	  var start = a[i].indexOf("index=") + 6;
-	  var end = (a[i] + "&").indexOf(start, "&");
-	  index = a[i].substring(start, end);
+	var ua = navigator.userAgent;
+	for (var i = 0; i < BOTS.length; i++) {
+		if (ua.match(BOTS[i])) {
+			BotDetected = true;
+			break;
+		}
 	}
-  }
-*/
 
+	if (!BotDetected) {
+		var query = window.location.search.toLowerCase();
+		if (query.indexOf("view=text") >= 0) {
+			View = TEXT
+		} else if (query.indexOf("view=score") >= 0) {
+			View = SCORE
+		} else if (query.indexOf("view=presentation") >= 0) {
+			View = PRESENTATION
+		} else {
+			col1_dismissed = !space_for_cols(false, false, false, TEXT);
+			col2_dismissed = false;
+			col3_dismissed = !space_for_cols(col1_dismissed, false, false, TEXT);
+			View = (space_for_cols(col1_dismissed, false, col3_dismissed, SCORE) ? SCORE : TEXT);
+		}
+	}
+  
 	abc2svg.no_midi = true;
-	//abc2svg.skipQueryParams = true;
   
 	if (!on_localhost() && window.location.hostname.indexOf("freehymns.org") < 0) {
 		var site_links = document.getElementsByClassName("site_link");
@@ -1751,12 +1682,7 @@ function get_folder_name(filename) {
 	} else if (filename.substring(0, 2) == "An" && filename.charAt(2) == filename.charAt(2).toUpperCase()) {
 		return "an";
 	} else if (filename.charAt(0) == "I" && filename.charAt(1) == filename.charAt(1).toUpperCase()) {
-		href = window.location.href;
-		if (href.indexOf("localhost") >= 0 || href.indexOf("file:") == 0) {
-			return "i_";
-		} else {
-			return "I";
-		}
+		return "i_";
 	} else if (filename.charAt(0) == "O" && filename.charAt(1) == filename.charAt(1).toUpperCase()) {
 		return "oh";
 	} else if (filename.substring(0, 2) == "Oh" && filename.charAt(2) == filename.charAt(2).toUpperCase()) {
@@ -1769,7 +1695,10 @@ function get_folder_name(filename) {
 }
 
 function load_text_data() {
-  var div = document.getElementById("text_data");
+  var div = null;
+  if (!fully_loaded) {
+	div = document.getElementById("text_data");
+  }
   if (div == null) {
 	var href = window.location.href + "&";
 	var i = href.indexOf("lang=");
@@ -1788,11 +1717,11 @@ function load_text_data() {
 	if (i > 0 && !fully_loaded) {
 		data.text_variant = href.substring(i+4, href.indexOf("&", i));
 	}
-	var url = "../../";
+	var url = "../";
 	if (href.indexOf("/site") >= 0) {
-		url += "../hymns/";
+		url += "../";
 	}
-	url += data.text_lang + "/" + get_folder_name(data.textID) + "/" + data.textID + ".txt?" + Math.ceil(Math.random() * 10000);
+	url += "hymns/" + data.text_lang + "/" + get_folder_name(data.textID) + "/" + data.textID + ".txt?" + Math.ceil(Math.random() * 10000);
 	fetch(url)
 	  .then((res) => res.text())
 	  .then((txt) => {
@@ -1813,7 +1742,10 @@ function text_data_loaded() {
 }
 
 function load_music_data() {
-  var div = document.getElementById("music_data");
+  var div = null;
+  if (!fully_loaded) {
+	div = document.getElementById("music_data");
+  }
   if (div == null) {
 	var href = window.location.href + "&";
 	if (data.musicID == null) {
@@ -1827,11 +1759,11 @@ function load_music_data() {
 		}
 	}
 	console.assert(data.musicID != null, "Can't determine music file id.");
-	var url = "../../";
+	var url = "../";
 	if (href.indexOf("/site") >= 0) {
-		url += "../hymns/";
+		url += "../";
 	}
-	url += "music/" + get_folder_name(data.musicID) + "/" + data.musicID + ".abc?" + Math.ceil(Math.random() * 10000);
+	url += "hymns/music/" + get_folder_name(data.musicID) + "/" + data.musicID + ".abc?" + Math.ceil(Math.random() * 10000);
 	fetch(url)
 	  .then((res) => res.text())
 	  .then((music) => {
@@ -1864,15 +1796,13 @@ function music_data_loaded() {
 
 function fill_score_view() {
 	var div = document.getElementById("score_view_main");
-	//if (div.getElementsByTagName("svg").length == 0) {
-		while (div.firstChild != null) {
-			div.removeChild(div.firstChild);
-		}
-		var script = document.createElement("script");
-		script.setAttribute("type", "text/vnd.abc");
-		script.appendChild(document.createTextNode(NULL_ABC));
-		div.appendChild(script);
-	//}
+	while (div.firstChild != null) {
+		div.removeChild(div.firstChild);
+	}
+	var script = document.createElement("script");
+	script.setAttribute("type", "text/vnd.abc");
+	script.appendChild(document.createTextNode(NULL_ABC));
+	div.appendChild(script);
 }
 
 function fill_present_view() {
@@ -1890,11 +1820,6 @@ function fill_present_view() {
 		}
 	}
 	
-	//while (Present_header.firstChild != null) {
-	//	Present_header.removeChild(Present_header.firstChild);
-	//}
-    //document.getElementsByTagName("title")[0].textContent = data.text_title;
-	//addSpan(Present_header, data.text_title, false);
 	document.getElementById("present_title").textContent = data.text_title;
 
 	while (Present_footer.firstChild != null) {
@@ -2087,6 +2012,12 @@ function fill_text_view() {
 	h.appendChild(document.createTextNode(data.text_title));
 	div.appendChild(h);
 	fill_in_text(div, false);
+	if (data.text_fields[AUTHOR] != null) {
+		var p = document.createElement("p");
+		p.className = "text_attribution";
+		p.appendChild(document.createTextNode("\u2014 " + getFieldValues(data.text_fields, AUTHOR)));
+		div.appendChild(p);
+	}
 }
 
 function fill_in_text(div, just_end_words) {
@@ -2189,9 +2120,7 @@ function update_mobile_shortcuts() {
 
 function show_hymn_details() {
 	document.getElementById("mobile_menu").style.display = NONE;
-	//if (abc2svg.verse_playing != null) {
-		resetMusic();
-	//}
+	resetMusic();
 	col2_dismissed = false;
 	View = SCORE;
 	if (!space_for_cols(col1_dismissed, col2_dismissed, col3_dismissed, View)) {
@@ -2207,11 +2136,11 @@ function show_hymn_details() {
 }
 
 function goto_index() {
-	window.location.href = "../../titles.html";
+	window.location.href = document.getElementById("indexframe").src;
 }
 
 function go_home() {
-	window.location.href = "../..";
+	window.location.href = "..";
 }
 
 function close_col1() {
@@ -2229,22 +2158,25 @@ function close_col2() {
 }
 
 function show_col1() {
-	if (!space_for_cols(false, false, true, View)) {
-		goto_index();
-		return;
-	}
-	col1_dismissed = false;
-	if (!space_for_cols(col1_dismissed, col2_dismissed, col3_dismissed, View)) {
-		if (space_for_cols(col1_dismissed, col2_dismissed, col3_dismissed, TEXT)) {
-			if (View != TEXT) {
-				View = TEXT;
-				updateView();
-				return;
-			}
+	if (col1_dismissed) {
+		if (!space_for_cols(false, false, true, View)) {
+			goto_index();
+			return;
 		}
-		col3_dismissed = true;
+		col1_dismissed = false;
+		if (!space_for_cols(col1_dismissed, col2_dismissed, col3_dismissed, View)) {
+			if (space_for_cols(col1_dismissed, col2_dismissed, col3_dismissed, TEXT)) {
+				if (View != TEXT) {
+					View = TEXT;
+					updateView();
+					return;
+				}
+			}
+			col3_dismissed = true;
+		}
+		redraw(false);
+		document.getElementById("indexframe").contentWindow.postMessage("load_index_state");
 	}
-	redraw(false);
 }
 
 function show_col2() {
@@ -2269,7 +2201,7 @@ function redraw(resize) {
 	if (View == PRESENTATION) {
 		vars.setProperty("--col3-margin", 0);
 	} else if (!col1_dismissed && col2_dismissed && col3_dismissed) {
-		//Is this possible?
+		//This shouldn't happen
 		Col1.style.width = "100%";
 	} else if (col1_dismissed && !col2_dismissed && col3_dismissed) {
 		Col2.style.width = "100%";
@@ -2277,9 +2209,6 @@ function redraw(resize) {
 	} else if (col1_dismissed && col2_dismissed && !col3_dismissed) {
 		vars.setProperty("--col3-margin", 0);
 	} else if (!col1_dismissed && !col2_dismissed && col3_dismissed) {
-		//Col1.style.width = ((window.innerWidth - ColSpacer_width) / 2) + "px";
-		//Col2.style.width = ((window.innerWidth - ColSpacer_width) / 2) + "px";
-		//Col2.style.left = ((window.innerWidth + ColSpacer_width) / 2) + "px";
 		Col1.style.width = col1_default_width + "px";
 		Col2.style.width = (window.innerWidth - col1_default_width - ColSpacer_width) + "px";
 		Col2.style.left = (col1_default_width + ColSpacer_width) + "px";
@@ -2335,27 +2264,15 @@ function redraw(resize) {
 	  Col2.style.display = "";
 	}
 	Col3.style.display = (col3_dismissed ? NONE: BLOCK);
-	//var on_mobile = ('ontouchstart' in document.documentElement) && (window.screen.)
-	//Col3_site_icon.style.display = (col1_dismissed && col2_dismissed && View != PRESENTATION) ? BLOCK : NONE);
-	//Col3_double_arrow.style.display = (col1_dismissed && col2_dismissed && View != PRESENTATION) ? BLOCK : NONE);
 	var show_mobile_controls = ((col1_dismissed && col2_dismissed) || View == PRESENTATION);
 	Col3_arrow.style.display = ((col2_dismissed && !show_mobile_controls) ? BLOCK : NONE);
-	//Col3_arrow.style.display = ((col2_dismissed && View != PRESENTATION) ? BLOCK : NONE);
-//	Col3_site_icon.style.display = ((space_for_2_cols() && col1_dismissed && col2_dismissed && View != PRESENTATION) ? BLOCK : NONE);
-//	Col3_double_arrow.style.display = ((space_for_2_cols() && col1_dismissed && col2_dismissed && View != PRESENTATION) ? BLOCK : NONE);
-//	Col3_arrow.style.display = ((space_for_2_cols() && col2_dismissed && View != PRESENTATION) ? BLOCK : NONE);
-//	var show_mobile_controls = ((!space_for_2_cols() && col1_dismissed && col2_dismissed) || View == PRESENTATION);
 	var titles = document.getElementsByClassName("text_title");
 	if (titles.length > 0) {
 		var x = titles[0].getBoundingClientRect().left;
-		titles[0].style.marginLeft = ((show_mobile_controls && x < 80) ? ((80 - x) + "px") : 0);
+		titles[0].style.marginLeft = ((show_mobile_controls && window.innerHeight < 800 && x < 80) ? ((80 - x) + "px") : 0);
+		titles[0].style.paddingTop = ((show_mobile_controls && window.innerHeight >= 800 && x < 80) ? "30px" : 0);
 	}
 	update_mobile_shortcuts();
-	/*
-	var shortcuts = document.getElementById("mobile_controls").getElementsByTagName("i");
-	for (var i = 0; i < shortcuts.length; i++) {
-		shortcuts[i].style.display = (space_for_2_cols() ? INLINE : NONE);
-	}*/
 	document.getElementById("present_header").style.paddingLeft = (show_mobile_controls ? "2em" : "");
 	document.getElementById("mobile_controls").style.display = (show_mobile_controls ? BLOCK : NONE);
 }
@@ -2388,11 +2305,6 @@ function keyDown(ev) {
 			changeTempo(-1);
 		}
 	}
-	/*if (ev.key == "p") {
-		if (!playing) {
-			play();
-		}
-	}*/
 	if (ev.key == " ") {
 		document.getElementById("mobile_menu").style.display = NONE;
 		if (abc2svg.verse_playing == null) {
@@ -2403,18 +2315,10 @@ function keyDown(ev) {
 			resume();
 		}
 	}
-	//if (ev.key == "r") {
-	//	resetMusic();
-	//}
 	if (ev.keyCode == 27) {
 		document.getElementById("mobile_menu").style.display = NONE;
 		if (abc2svg.verse_playing == null) {
 			show_hymn_details();
-//			resetMusic();
-//			View = SCORE;
-//			space_for_cols(col1_dismissed, _col2_dismissed, _col3_dismissed, _view)
-//			View = space_for_score() ? SCORE : TEXT;
-//			updateView();
 		} else {
 			resetMusic();
 		}
@@ -2442,9 +2346,6 @@ function changeView(new_view, wordsShown) {
 	if (View == SCORE || View == PRESENTATION) {
 		if (changed) {
 			opts.scoreChanged = false;
-			//Present_main.style.transform = "";
-			//Present_main.style.height = "200px";
-			//Present_main.style.width = "2000cm";
 			parse_music_data();
 			layoutMusic();
 			loadMusic();
@@ -2462,14 +2363,11 @@ function updateView() {
   
   if (View == PRESENTATION) {
 	col1_dismissed = true;
-	//Present_header.style.transform = "";
-	//Present_main.style.transform = "";
 	if (Present_main.style.transform == "") {
 		update_presentation_divs();
 	}
   }
   redraw(false);
-  //document.cookie = "view=" + View_option.value + ";path=/";
 }
 
 function update_presentation_divs(tryno) {
@@ -2493,8 +2391,6 @@ function update_presentation_divs(tryno) {
 		}
 		if (headerHeight == 0) {
 			headerHeight = svgs[0].getBoundingClientRect().height;
-			//Present_main.style.height = (window.innerHeight - 32) + "px";
-			//Present_main.style.width = music_rect.width + "px";
 		}
         var width = g_rect.x * 2 + g_rect.width;
 		var viewbox = "0 0 " + Math.ceil(width) + " " + svgs[1].getAttribute("viewBox").split(" ")[3];
@@ -2525,7 +2421,6 @@ function update_presentation_divs(tryno) {
 	    v++;
 	    div = document.getElementById("v" + v);
     }
-    //Present_main.style.transform = "translateX(-1000cm) scale(" + scale + ",1) translateX(1000cm)";
 	Present_main.style.transform = "translateX(" + (-musicWidth / 2) + "px) scale(" + scale + ",1) translateX(" + (musicWidth / 2) + "px)";
 	
 	Present_header.getElementsByTagName("span")[0].style.fontSize = (12 * scale) + "pt";
@@ -2543,34 +2438,6 @@ function changeTempo(amount) {
 }
 
 function resetMusic() {
-	/*
-  toggle_menu('top');
-  var parts = Roadmap.split(";");
-  for (var i = 0; i < parts.length; i++) {
-	var part_name = null;
-    var colon = parts[i].indexOf(":");
-    if (colon > 0) {
-	  part_name = parts[i].substring(0, colon);
-    } else if (isAlpha(parts[i].charAt(0))) {
-	  part_name = parts[i];
-    }
-	if (part_name != null) {
-	  var cb = document.getElementById("cb" + part_name);
-	  cb.disabled = false;
-	  if (part_name == "Loop") {
-		cb.checked = false;
-	  } else if (part_name == "Re") {
-		cb.checked = (Roadmap.indexOf(";Re:0") >= 0);
-	  } else {
-		cb.checked = true;  
-	  }
-	  if (part_name.charAt(0) == 'V') {
-		document.getElementById('v' + part_name.substr(1)).style.display = INLINE_BLOCK;
-	  }
-	  document.getElementById("lbl" + part_name).style.fontWeight = "normal";
-	}
-  }
-  */
   playing = false;
   noSleep.disable();
   //if (wakelock != null) {
@@ -2580,7 +2447,6 @@ function resetMusic() {
   Play_pause_resume.value = "Play";
   document.getElementById("play_pause_resume_link").textContent = "Play";
   document.getElementById("mobile_menu").style.display = NONE;
-  //part_playing = null;
   abc2svg.tune_index_playing = null;
   abc2svg.verse_playing = null;
   abc2svg.follow_speed = null;
@@ -2691,26 +2557,14 @@ function reset_tune_verse(tune, verse) {
 				var code = abc2svg.codes[tune]["abcr" + sym.istart];
 				if (code != null && data.rests != null && data.rests[code] != null) {
 					var turn_on = (verse != null && data.rests[code][verse]);
-					//var turn_on = false;
-					//if (verse != null && data.rests[code] != null) {
-					//	turn_on = (data.rests[code][0] || data.rests[code][verse]);
-					//}
 					sym.noplay = turn_on;
 					next_s = sym.ts_next;
 					while (next_s.type == sym.type && next_s.time == sym.time) {
 						next_s.noplay = turn_on;
 						next_s = next_s.ts_next;
 					}
-					//for (var i = 1; i < sym.notes.length; i++) {
-					//	next_s = next_s.ts_next;
-					//	next_s.noplay = turn_on;
-					//}
 				} else if (code != null && data.ties != null && data.ties[code] != null) {
 					var turn_on = (verse != null && data.ties[code][verse]);
-					//var turn_on = false;
-					//if (verse != null && data.ties[code] != null) {
-					//	turn_on = (data.ties[code][0] || data.ties[code][verse]);
-					//}
 					//console.log("tie at " + code + " " + "next=ts_next: " + (sym.next == sym.ts_next));
 					/*if (code.toUpperCase() == "A4") {
 						console.log("tie at " + code + " " + "next=ts_next: " + (sym.next == sym.ts_next));
@@ -2737,9 +2591,6 @@ function reset_tune_verse(tune, verse) {
 					var tied = sym.next;
 					sym.dur += sign * tied.dur;
 					sym.pdur += sign * tied.dur / sym.o_dur * sym.o_pdur ;
-					//if (tied.multi == 1) {
-					//	tied.ts_next.noplay = turn_on;
-					//}
 					var next_tied_s = tied;
 					while (next_tied_s.type == tied.type && next_tied_s.time == tied.time) {
 						var same_pitch = false;
@@ -2752,21 +2603,12 @@ function reset_tune_verse(tune, verse) {
 						next_tied_s.noplay = (turn_on && same_pitch);
 						next_tied_s = next_tied_s.ts_next;
 					}
-					//for (var i = tied.notes.length - 1; i >= 0; i--) {
-					//	next_tied_s.noplay = (turn_on && sym.notes[i].pit == next_tied_s.notes[next_tied_s.notes.length - 1].pit);
-					//	next_tied_s = next_tied_s.ts_next;
-					//}
 					next_s = sym.ts_next;
 					while (next_s.type == sym.type && next_s.time == sym.time) {
 						next_s.dur += sign * tied.dur;
 						next_s.pdur += sign * tied.dur / sym.o_dur * sym.o_pdur;
 						next_s = next_s.ts_next;
 					}
-					//for (var i = 1; i < sym.notes.length; i++) {
-					//	next_s = next_s.ts_next;
-					//	next_s.dur += sign * tied.dur;
-					//	next_s.pdur += sign * tied.dur / sym.o_dur * sym.o_pdur;
-					//}
 					if (sign < 0) {
 						sym.o_dur = null;
 						sym.o_pdur = null;
@@ -2778,81 +2620,60 @@ function reset_tune_verse(tune, verse) {
 }
 
 function play_next() {
-  //var mystarttime = Date.now();
-  nextPlayStepScheduled = false;
-  if (!playing) {
-  	return;
-  }
-  if (plan_remaining.length == 0) {
-	resetMusic();
-	return;
-  }
-  //abc2svg.playsection(null);
-  //if (part_playing != null) {
-  //  document.getElementById("lbl" + part_playing).style.fontWeight = "normal";
-  //}
-  var part_name = null;
-  var part = plan_remaining;
-  var semicolon = plan_remaining.indexOf(";");
-  if (semicolon > 0) {
-	  part = plan_remaining.substring(0, semicolon);
-	  plan_remaining = plan_remaining.substring(semicolon + 1);
-  } else {
-	  plan_remaining = "";
-  }
-  var colon = part.indexOf(":");
-  if (colon > 0) {
-	part_name = part.substring(0, colon);
-	part = part.substring(colon + 1);
-  }
-  var verse = 0;
-  var start_code = "A1";
-  var end_code = null;
-  var at = part.indexOf("@");
-  abc2svg.skip_repeats = (at == 0);
-  if (at > 0) {
-	verse = parseInt(part.substring(0,at));
-  }
-  if (at >= 0) {
-	  part = part.substring(at + 1);
-	  var dash = part.indexOf("-");
-	  if (dash > 0) {
-		  start_code = part.substring(0, dash);
-		  end_code = part.substring(dash + 1);
-	  } else {
-		  start_code = part;
-	  }
-  } else {
-	  verse = parseInt(part);
-  }
-
-  var div = document.getElementById(View == PRESENTATION ? "v" + verse : "score_view_main");
-  var tune = get_tune(div);
-  abc2svg.tune_index_playing = tune;
-  abc2svg.verse_playing = verse;
-  //abc2svg.pause_after_tune = 25;
-  reset_tune_verse(tune, verse);
-  /*
-  if (part_name != null) {
-	var cb = document.getElementById("cb" + part_name);
-	if (part_name != "Loop") {
-	  cb.disabled = true;
+	//var mystarttime = Date.now();
+	nextPlayStepScheduled = false;
+	if (!playing) {
+		return;
 	}
-	if (!cb.checked) {
-	  if (part_name == "Loop") {
+	if (plan_remaining.length == 0) {
+		resetMusic();
+		return;
+	}
+	//if (part_playing != null) {
+	//  document.getElementById("lbl" + part_playing).style.fontWeight = "normal";
+	//}
+	var part_name = null;
+	var part = plan_remaining;
+	var semicolon = plan_remaining.indexOf(";");
+	if (semicolon > 0) {
+		part = plan_remaining.substring(0, semicolon);
+		plan_remaining = plan_remaining.substring(semicolon + 1);
+		} else {
 		plan_remaining = "";
-      }
-	  play();
-	  return;
 	}
-	part_playing = part_name;
-  }
-  if (part_playing != null) {
-	document.getElementById("lbl" + part_playing).style.fontWeight = "bold";
-  }
-  */
+	var colon = part.indexOf(":");
+	if (colon > 0) {
+		part_name = part.substring(0, colon);
+		part = part.substring(colon + 1);
+	}
+	var verse = 0;
+	var start_code = "A1";
+	var end_code = null;
+	var at = part.indexOf("@");
+	abc2svg.skip_repeats = (at == 0);
+	if (at > 0) {
+		verse = parseInt(part.substring(0,at));
+	}
+	if (at >= 0) {
+		part = part.substring(at + 1);
+		var dash = part.indexOf("-");
+		if (dash > 0) {
+			start_code = part.substring(0, dash);
+			end_code = part.substring(dash + 1);
+			} else {
+			start_code = part;
+		}
+		} else {
+		verse = parseInt(part);
+	}
+
+	var div = document.getElementById(View == PRESENTATION ? "v" + verse : "score_view_main");
+	var tune = get_tune(div);
+	abc2svg.tune_index_playing = tune;
+	abc2svg.verse_playing = verse;
+	//abc2svg.pause_after_tune = 25;
+	reset_tune_verse(tune, verse);
 	
-	//abc2svg.skip_repeats = (part_name == "Intro");
 	//console.log("mystarttime: " + (Date.now() - mystarttime));
 	var start_rect = null; //abc2svg.abc.tunes[tune][0];
 	var end_rect = null;

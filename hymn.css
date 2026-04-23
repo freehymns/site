@@ -57,6 +57,7 @@ svg {display:block; margin:0 auto}
 .stanza_section {margin-top:.25em}
 .stanza_section div {margin-left:1.5em; padding-bottom:.25em}
 .stanza_section_heading {margin-left:-1.5em; padding-right:5px; font-style:italic; vertical-align:top}
+.text_attribution {margin-left:4em}
 .pressable {cursor:default; user-select:none}
 .site_icon {width:16px; cursor:pointer; height:16px; background-image:url(favicon.png); background-size:16px 16px}
 .close_icon {position:absolute; top:0px; right:0px; width:16px; cursor:pointer; height:16px; background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAYdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCA1LjEuMvu8A7YAAAC2ZVhJZklJKgAIAAAABQAaAQUAAQAAAEoAAAAbAQUAAQAAAFIAAAAoAQMAAQAAAAIAAAAxAQIAEAAAAFoAAABphwQAAQAAAGoAAAAAAAAAYAAAAAEAAABgAAAAAQAAAFBhaW50Lk5FVCA1LjEuMgADAACQBwAEAAAAMDIzMAGgAwABAAAAAQAAAAWgBAABAAAAlAAAAAAAAAACAAEAAgAEAAAAUjk4AAIABwAEAAAAMDEwMAAAAADp1fY4ytpsegAAAT5JREFUOE+dkrtKA0EYhb8IKVMq6BuIIEpQBC/BjVFLDQlGCYhGwgZF8QUUtBLFQJpsZeETCL6BWIitN7xErBSMXcop1mJ2ZzM7iRBPdf6zc76FfybiFuwqYPM/ORG3YLvhtBN1aZOVgI01LdI0PwureS0KAFMTsJKDsdHWkFQSMoswOQ7FdRUHgKtreHiSPgxJTsNSRnoh4OJSfTJ3sLsNA/3S39zCWw3yy3IWAvYOoP6jjpsAQhBfLcoYS/RVrsDnVzC3KdMWYCWgrzeYo1FILzSfUDIBM5a8Dbw/P3qLHYlDqagdxQDMpSCXlV4I2D+E0wo8v8gsPgxbJa2iv4NsWnq//F2X83EZXmvSDw3Czqaq6e/g7t4s+zo6gfcPaDTg7FzF5jX2dJvlZsViEuLJXOJfZdDKeABHSzqT8wt//WcpXAKP2wAAAABJRU5ErkJggg==)}

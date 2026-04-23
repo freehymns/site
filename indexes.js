@@ -56,7 +56,7 @@ function set_topic(new_topic) {
 		var divs = document.getElementsByTagName("div");
 		for (var j = 0; j < divs.length; j++) {
 			var topics = divs[j].getAttribute("topics");
-			if (topics == null || topics.indexOf(Topic) < 0) {
+			if (topics == null || topics.toLowerCase().indexOf(Topic.toLowerCase()) < 0) {
 				divs[j].style.display = "none";
 			}
 		}
@@ -64,17 +64,28 @@ function set_topic(new_topic) {
 }
 
 function index_loaded() {
+	window.addEventListener("message", load_index_state);
 	IndexName = window.location.pathname.substring(window.location.pathname.lastIndexOf("/") + 1).replace(".html", "");
-	if (" #christmas#easter#all".indexOf(window.location.hash) > 0) {
-		set_topic(window.location.hash.substring(1));
-		save_index_state();
+	var topic = null;
+	params = window.location.search.split("&");
+	for (var i = 0; i < params.length; i++) {
+		if (params[i].indexOf("topic=") >= 0) {
+			topic = params[i].split("=")[1];
+		}
+	}
+	if (topic != null && "#christmas#easter#all".indexOf(topic) > 0) {
+		set_topic(topic);
+		save_index_state(true);
 	} else {
 		load_index_state();
 	}
 }
 
-function save_index_state() {
-	document.cookie = "index=" + IndexName + "," + Topic + "," + get_scroll_top() + "; SameSite=Strict; Path=/";
+function save_index_state(force) {
+	if (force || get_scroll_top() > 0) {
+		//console.log("save_index_state " + "index=" + IndexName + "," + Topic + "," + get_scroll_top() + "; SameSite=Strict; Path=/");
+		document.cookie = "index=" + IndexName + "," + Topic + "," + get_scroll_top() + "; SameSite=Strict; Path=/";
+	}
 }
 
 function load_index_state() {
