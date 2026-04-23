@@ -2638,7 +2638,7 @@ function play_next() {
 	if (semicolon > 0) {
 		part = plan_remaining.substring(0, semicolon);
 		plan_remaining = plan_remaining.substring(semicolon + 1);
-		} else {
+	} else {
 		plan_remaining = "";
 	}
 	var colon = part.indexOf(":");
@@ -2660,10 +2660,10 @@ function play_next() {
 		if (dash > 0) {
 			start_code = part.substring(0, dash);
 			end_code = part.substring(dash + 1);
-			} else {
+		} else {
 			start_code = part;
 		}
-		} else {
+	} else {
 		verse = parseInt(part);
 	}
 
