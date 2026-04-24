@@ -221,5 +221,4 @@ if build == "all":
 	shutil.copy2("hymnsing.jpg", out_dir)
 	shutil.copy2("indexes.css", out_dir)
 	shutil.copy2("indexes.js", out_dir)
-	shutil.copy2("LICENSE", out_dir)
 	shutil.copy2("NoSleep.min.js", out_dir)
