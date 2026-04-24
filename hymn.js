@@ -2328,11 +2328,10 @@ function keyDown(ev) {
 }
 
 function changeView(new_view, wordsShown) {
-	space_for_cols(col1_dismissed, col2_dismissed, col3_dismissed, new_view)
-	if (!space_for_cols(col1_dismissed, col2_dismissed, col3_dismissed, new_view)) {
+	if (!space_for_cols(col1_dismissed, col2_dismissed, false, new_view)) {
 		col1_dismissed = true;
 	}
-	if (!space_for_cols(col1_dismissed, col2_dismissed, col3_dismissed, new_view)) {
+	if (!space_for_cols(col1_dismissed, col2_dismissed, false, new_view)) {
 		col2_dismissed = true;
 	}
 	col3_dismissed = false;
