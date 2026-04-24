@@ -258,7 +258,7 @@ Printing may be bad because the file contains pure HTML and %%pageheight\
 		// get the global parameters
 		if (abc2svg.music == null)
 		abc2svg.music = [{
-			t: "%% _\n",	// global parameters
+			t: (abc2svg.global_params != null ? abc2svg.global_params : "%% _\n"),	// global parameters
 			n: "mus0"
 		}]
 

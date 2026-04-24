@@ -1787,6 +1787,8 @@ function music_data_loaded() {
 
     changeTempo(0);
 
+	abc2svg.global_params = "%%soundfont ../akai_steinway.sf2";
+	//abc2svg.global_params = "%%soundfont ../SC55Piano_V2.js";
 	dom_loaded();
 
 	layoutMusic();
