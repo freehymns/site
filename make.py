@@ -205,14 +205,15 @@ if build == "all":
 		out.write(index_html);
 
 	shutil.copytree(hymns_dir, out_dir + "/hymns", ignore=shutil.ignore_patterns(".*", "*.b*", "Copy of *"), dirs_exist_ok=True)
-	if not os.path.exists(out_dir + "/abc2svg/Scc1t2"):
-		shutil.copytree("abc2svg/Scc1t2", out_dir + "/abc2svg/Scc1t2")
+	#if not os.path.exists(out_dir + "/abc2svg/Scc1t2"):
+	#	shutil.copytree("abc2svg/Scc1t2", out_dir + "/abc2svg/Scc1t2")
 	shutil.copy2("abc2svg/abc2svg-1.js", out_dir + "/abc2svg")
 	shutil.copy2("abc2svg/abc2svg.ttf", out_dir + "/abc2svg")
 	shutil.copy2("abc2svg/abcweb-1.js", out_dir + "/abc2svg")
 	shutil.copy2("abc2svg/combine-1.js", out_dir + "/abc2svg")
-	shutil.copy2("abc2svg/MIDI-1.js", out_dir + "/abc2svg")
+	#shutil.copy2("abc2svg/MIDI-1.js", out_dir + "/abc2svg")
 	shutil.copy2("abc2svg/snd-1.js", out_dir + "/abc2svg")
+    shutil.copy2("akai_steinway.sf2", out_dir)
 	shutil.copy2("contact.png", out_dir)
 	shutil.copy2("favicon.png", out_dir)
 	shutil.copy2("hymn.css", out_dir)
