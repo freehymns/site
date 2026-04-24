@@ -213,7 +213,7 @@ if build == "all":
 	shutil.copy2("abc2svg/combine-1.js", out_dir + "/abc2svg")
 	#shutil.copy2("abc2svg/MIDI-1.js", out_dir + "/abc2svg")
 	shutil.copy2("abc2svg/snd-1.js", out_dir + "/abc2svg")
-    shutil.copy2("akai_steinway.sf2", out_dir)
+	shutil.copy2("akai_steinway.sf2", out_dir)
 	shutil.copy2("contact.png", out_dir)
 	shutil.copy2("favicon.png", out_dir)
 	shutil.copy2("hymn.css", out_dir)
