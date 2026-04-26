@@ -25,7 +25,7 @@ svg {display:block; margin:0 auto}
 #score_view_footer {text-align:center}
 #present {position:absolute}
 #present_header {position:fixed; top:0; left:.5em; height:10vw; min-width:100vw; overflow:hidden}
-#present_title {margin-left:20px; xbackground-color:cyan}
+#present_title {margin-left:20px}
 #present_main {position:absolute; top:0; left:0; width:2000cm; height:200px}
 #present_main div {display:inline-block}
 #present_footer {position:fixed; left:.5em}
@@ -37,12 +37,12 @@ svg {display:block; margin:0 auto}
 #mobile_menu i {font-size:12pt; margin-left:1em}
 #score_verses_table {border-collapse:collapse}
 #score_verses_table td {padding-left: 5px}
-.metadata_frame {border:2px,#eeeeee,solid; xpadding-right:5px; display:inline-block}
+.metadata_frame {border:2px,#eeeeee,solid; display:inline-block; overflow:hidden}
 .metadata_table th {text-align:left; font-weight:bold; vertical-align:top}
 .metadata_table td {vertical-align:top; padding-left:10px; overflow:hidden}
 .metadata_table {border-collapse:collapse}
-.metadata_table div {max-height:1.2em; overflow:hidden}
-.metadata_table tr:nth-child(odd) {background-color:#eeffff; width:30em}
+.metadata_table div {max-height:1.2em}
+.metadata_table tr:nth-child(odd) {background-color:#eeffff}
 .tree_node {margin-left:1.5em}
 .tree_node input,select {margin-top:4px; margin-bottom:4px}
 .tree_title span:hover {color:blue; font-weight:bold}

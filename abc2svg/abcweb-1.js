@@ -595,8 +595,6 @@ function clean_txt(txt) {
 			}
 		}
 		
-		abc2svg.tune_playing = i;
-
 		end_s = null
 		if (end_svg) {
 			end_s = s
@@ -667,6 +665,10 @@ function clean_txt(txt) {
 	for (var i = 1; i < abc2svg.music.length; i++)
 		abc2svg.alldiv.push(i)
 	visible()
+	
+	if (abc.cfmt().soundfont)
+		playconf.sfu = abc.cfmt().soundfont
+	abcplay = AbcPlay(playconf);
 } // dom_loaded()
 
 // ---- interface for changing the music source and redisplaying it ----

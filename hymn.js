@@ -2242,11 +2242,12 @@ function redraw(resize) {
 	}
 	
 	Col2_top.style.width = Col2.style.width;
+	var col2_rect = Col2.getBoundingClientRect();
 	document.getElementById("col2_contents").style.width = Col2.style.width;
 	var md_frames = document.getElementsByClassName("metadata_frame");
-	var rect = Col2.getBoundingClientRect();
-	md_frames[0].style.maxWidth = (rect.left + rect.width - md_frames[0].getBoundingClientRect().left - 10) + "px";
-	md_frames[1].style.maxWidth = (rect.left + rect.width - md_frames[1].getBoundingClientRect().left - 10) + "px";
+	for (var i = 0; i < md_frames.length; i++) {
+		md_frames[i].style.maxWidth = (col2_rect.left + col2_rect.width - md_frames[i].getBoundingClientRect().left - 10) + "px";
+	}
 
 	if (col1_dismissed || View == PRESENTATION) {
 	  Col1.style.display = NONE;
