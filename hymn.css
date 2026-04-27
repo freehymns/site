@@ -37,6 +37,8 @@ svg {display:block; margin:0 auto}
 #mobile_menu i {font-size:12pt; margin-left:1em}
 #score_verses_table {border-collapse:collapse}
 #score_verses_table td {padding-left: 5px}
+#loading {position:absolute; top:50%; left:50%; width:200px; height:200px}
+#loading svg {margin-top: -100px; margin-left: -100px}
 .metadata_frame {border:2px,#eeeeee,solid; display:inline-block; overflow:hidden}
 .metadata_table th {text-align:left; font-weight:bold; vertical-align:top}
 .metadata_table td {vertical-align:top; padding-left:10px; overflow:hidden}

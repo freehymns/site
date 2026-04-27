@@ -1424,6 +1424,10 @@ function Audio5(i_conf) {
 				})
 			return
 		    }
+			var loading_indicator = document.getElementsByClassName("abc_loading_indicator")
+			if (loading_indicator.length > 0) {
+				loading_indicator[0].style.display = "block";
+			}
 		    var	r = new XMLHttpRequest()	// .sf2
 			r.open('GET', conf.sfu, true)
 			r.responseType = "arraybuffer"
@@ -1434,9 +1438,15 @@ function Audio5(i_conf) {
 					parser.parse()
 					presets = parser.getPresets()
 					load_res(s)	// load the instruments
+					if (loading_indicator.length > 0) {
+						loading_indicator[0].style.display = "none";
+					}
 					if (--w_instr == 0)
 						play_start()
 				} else {
+					if (loading_indicator.length > 0) {
+						loading_indicator[0].style.display = "none";
+					}
 					errmsg('could not load the sound file '
 						+ conf.sfu)
 					if (--w_instr == 0)
