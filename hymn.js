@@ -81,10 +81,14 @@ const KEY_TABLE = [
 
 const DEBUG_LAYOUT = window.location.href.indexOf("DebugLayout") > 0;
 
+const ON_LOCALHOST = ("localhost,127.0.0.1".indexOf(window.location.hostname) >= 0);
+
+const log = (ON_LOCALHOST ? console.log : (msg) => null);
+
 var noSleep = new NoSleep();
 
 var data = {};
-var opts = {wordsShown:HYMN, wordSpacing:"normal"};
+var opts = {wordsShown:HYMN, breakOnlyOnBars:false, forceSpaceBetweenWords:false, manageBreaksAndSpacing:true};
 
 var Col1;
 var Col1_top;
@@ -117,8 +121,8 @@ var KeyboardDetected = false;
 var BotDetected = false;
 
 var Pagesize;
+var Best_layout;
 var View = TEXT;
-
 var tempo = 100;
 var col1_dismissed = true;
 var col2_dismissed = true;
@@ -132,6 +136,12 @@ var playing = false;
 var abc_seq = 1;
 
 var fully_loaded = false;
+
+function log_try(fname, tryno) {
+	if (tryno != null) {
+		log(fname + ", try" + tryno);
+	}
+}
 
 function space_for_cols(_col1_dismissed, _col2_dismissed, _col3_dismissed, _view) {
 	if (_col1_dismissed && _col2_dismissed && _col3_dismissed) {
@@ -151,11 +161,6 @@ function space_for_cols(_col1_dismissed, _col2_dismissed, _col3_dismissed, _view
 	} else if (!_col1_dismissed && !_col2_dismissed && !_col3_dismissed) {
 		return ((_view == TEXT && window.innerWidth >= Col1_width * 3) || (_view == SCORE && window.innerWidth >= Col1_width * 2 + 850));
 	}
-}
-
-
-function on_localhost() {
-	return ("localhost,127.0.0.1".indexOf(window.location.hostname) >= 0);
 }
 
 function isAlpha(ch){
@@ -216,6 +221,8 @@ function getFieldValues(variable, field) {
 }
 
 function parse_text_data() {
+	data.ties = null;
+	data.rests = null;
 	data.verseCount =  0;
 	data.stanzas = [ /*
 		{
@@ -413,7 +420,7 @@ function parse_text_data() {
 				continue;
 			}
 		}
-
+		
 		if (stanza.lines != null) {
 			var text_line = encodeSpecials(lines[i]).trim().replaceAll("-|", "-").replaceAll("|", " ").replaceAll("/:","").replaceAll(":/","").replaceAll("% ","").replaceAll(" %","");
 			stanza.lines.push(text_line);
@@ -519,6 +526,7 @@ function parse_text_data() {
 		var meterString = meter[0];
 		for (var a = 1; a < 26 && meter[a] != null; a++) {
 			var new_part = false;
+			//Todo: check this
 			for (key in named_parts) {
 				if (named_parts[key].lo == a && a > 0) {
 					new_part = true;
@@ -579,15 +587,36 @@ function parse_text_data() {
 }
 
 function get_tune(div) {
-	var svgs = div.getElementsByTagName("svg");
-	for (var j = 0; j < svgs.length; j++) {
-		var cls = svgs[j].className.baseVal;
-		var j = cls.indexOf("tune");
-		if (j >= 0) {
-			return parseInt(cls.substring(j + 4));
+	if (div != null) {
+		var svgs = div.getElementsByTagName("svg");
+		for (var j = 0; j < svgs.length; j++) {
+			var cls = svgs[j].className.baseVal;
+			var j = cls.indexOf("tune");
+			if (j >= 0) {
+				return parseInt(cls.substring(j + 4));
+			}
 		}
 	}
 	return null;
+}
+
+function get_music(tune) {
+	var music = null;
+	if (tune != null) {
+		for (var i = 0; i < abc2svg.music.length; i++) {
+			if (abc2svg.music[i].n == abc2svg.abc.tunes[tune][0].fname) {
+				music = abc2svg.music[i].t;
+			}
+		}
+	}
+	return music;
+}
+
+function get_music_id(music) {
+	if (music == null || music == "" || music.charAt(0) != "X") {
+		return null;
+	}
+	return parseInt(music.substring(2, music.indexOf("\n")));
 }
 
 function set_music(div, music) {
@@ -599,19 +628,25 @@ function set_music(div, music) {
 		}
 	}
     abc2svg.set_music(child, music);
+	if (div.id != "no_words_score" && div.id != "codewords_score" && div.id.indexOf("layout") < 0) {
+		prepare_music(div);
+	}
 }
 
 function prepare_music(div, tryno) {
-	if (tryno > 20) {
+	if (tryno > 200) {
 		console.log("prepare_music failed");
 		return;
 	}
 	var tune = get_tune(div);
-	if (tune == null) {
-		setTimeout(prepare_music, 25, div, (tryno == null ? 1 : tryno + 1));
+	var music = get_music(tune);
+	if (tune == null || get_music_id(music) == 1) {
+		log_try("prepare_music", tryno);
+		setTimeout(prepare_music, 5, div, (tryno == null ? 1 : tryno + 1));
 		return;
 	}
 	
+	// Create index to address the svg text elements of the lyrics by note codeword
 	var maps = [];
 	var texts = div.getElementsByTagName("text");
     for (var i = 0; i < texts.length; i++) {
@@ -692,6 +727,7 @@ function prepare_music(div, tryno) {
 	}
 	//console.log(maps);
 	
+	// Create index to address the svg rect elements of the notes by symbol index in the parsed tune data 
 	var music = null;
 	for (var i = 0; i < abc2svg.music.length; i++) {
 		if (abc2svg.music[i].n == abc2svg.abc.tunes[tune][0].fname) {
@@ -732,7 +768,6 @@ function prepare_music(div, tryno) {
 		}
 		var end = (data.raw_music + "\nV:" + next_v).indexOf("\nV:" + next_v, start);
 		if (start > 0) {
-			var sym = abc2svg.abc.tunes[tune][0];
 			for (var sym = abc2svg.abc.tunes[tune][0]; sym.ts_next != null; sym = sym.ts_next) {
 				var voice = 0;
 				while (voice < voice_starts.length && (voice_starts[voice] == null || voice_starts[voice] < sym.istart)) {
@@ -799,16 +834,6 @@ function prepare_music(div, tryno) {
 	//console.log(rect_map);
 }
 
-function fixTexts(e) {
-  var texts = e.getElementsByTagName("text");
-  for (var i = 0; i < texts.length; i++) {
-	var c = texts[i].textContent.substr(0,1);
-	if (c == "?" || c == "-") {
-	  texts[i].style.display = NONE;
-	}
-  }
-}
-
 function addSpan(e, text, linebreak) {
 	var span = document.createElement("span");
 	span.appendChild(document.createTextNode(text));
@@ -856,7 +881,6 @@ function toggleProperty() {
 		span.setAttribute("onclick", "toggleProperty()");
 		new_th.appendChild(span);
 		tr.appendChild(new_th);
-		//}
 	} else {
 		var e = window.event.target.parentNode;
 		while (e.nodeName != "TR") {
@@ -1020,37 +1044,6 @@ function addRadioRow(table, name, value, checked, onclick) {
 	td2.appendChild(div);
 	tr.appendChild(td2);
 	table.appendChild(tr);
-}
-
-function addSpaces(words, spacing) {
-	if (spacing == "normal") {
-		return words.replaceAll("~ ", "&ensp; ");
-	} else if (spacing == "less") {
-		return words.replaceAll("~ ", " ");
-	} else if (spacing == "present") {
-		var parts = words.split(" ");
-		var new_words = parts[0];
-		for (var i = 1; i < parts.length; i++) {
-			if (parts[i] == "*") {
-				new_words += " *";
-			} else {
-				new_words += " \u2002";
-				var append = true;
-				for (var j = 0; append && j < parts[i].length; j++) {
-					if ("-_".indexOf(parts[i].charAt(j)) >= 0) {
-						new_words += parts[i].substring(0, j) + "\u2002" + parts[i].substring(j);
-						append = false;
-					}
-				}
-				if (append) {
-					new_words += parts[i] + "\u2003";
-				}
-			}
-		}
-		return new_words;
-	} else {
-		return ("&ensp;" + words.substr(words.substr(0,1) == ' ' ? 1 : 0)).replaceAll(" ", " &ensp;").replaceAll("&ensp;*", "*");
-	}
 }
 
 function parse_music_data() {
@@ -1352,7 +1345,11 @@ function parse_music_data() {
 	    new_music += lines[i] + "\n";
 	  }
 	}
-
+	
+	new_music = new_music.replaceAll("!sp!y", "");
+	new_music = new_music.replaceAll(/\"Refrain\"\s+y/ig, "");
+	//new_music = new_music.replaceAll("||", "|");
+	/*
 	var len = 0;
 	var barno = 1001;
 	while (new_music.length != len) {
@@ -1363,7 +1360,57 @@ function parse_music_data() {
 		barno++;
 	}
 	//console.log(new_music);
+	*/
+	//if (opts.wordsShown == NONE) {
+	//	new_music = replace_words(new_music, null, "normal");
+	//} else if (opts.wordsShown == HYMN) {
+	//	new_music = replace_words(new_music, data.parsed_words[0], opts.wordSpacing);
+	//}
+
+	data.processed_music = null;
+	data.music_with_split_points = null;
 	data.preprocessed_music = new_music;
+}
+
+function addSpaces(words, spacing) {
+	if (spacing == "normal") {
+		return words.replaceAll("~ ", "&ensp; ");
+	} else if (spacing == "less") {
+		return words.replaceAll("~ ", " ");
+	} else if (spacing == "padded") {
+		var parts = words.split(" ");
+		var new_words = parts[0];
+		for (var i = 1; i < parts.length; i++) {
+			new_words += " " + parts[i]
+			if ("-_*".indexOf(parts[i].charAt(parts[i].length - 1)) < 0) {
+				new_words += "\u2009\u2009\u2009\u2009";
+			}
+		}
+		return new_words;
+	} else if (spacing == "present") {
+		var parts = words.split(" ");
+		var new_words = parts[0];
+		for (var i = 1; i < parts.length; i++) {
+			if (parts[i] == "*") {
+				new_words += " *";
+			} else {
+				new_words += " \u2002";
+				var append = true;
+				for (var j = 0; append && j < parts[i].length; j++) {
+					if ("-_".indexOf(parts[i].charAt(j)) >= 0) {
+						new_words += parts[i].substring(0, j) + "\u2002" + parts[i].substring(j);
+						append = false;
+					}
+				}
+				if (append) {
+					new_words += parts[i] + "\u2003";
+				}
+			}
+		}
+		return new_words;
+	} else {
+		return ("&ensp;" + words.substr(words.substr(0,1) == ' ' ? 1 : 0)).replaceAll(" ", " &ensp;").replaceAll("&ensp;*", "*");
+	}
 }
 
 function replace_words(music, new_words, wordSpacing) {
@@ -1395,70 +1442,380 @@ function replace_words(music, new_words, wordSpacing) {
 	return new_music;
 }
 
-function layoutMusic(tryno) {
-	if (tryno > 20) {
-		console.log("layoutMusic failed");
-		return;
-	}
-    if (abc2svg.music == null || data.preprocessed_music == null) {
-		setTimeout(layoutMusic, 10, (tryno == null ? 1 : tryno + 1));
-		return;
-    }
-	
-	var layout_music = "";
-	var lines = replace_words(data.preprocessed_music, data.parsed_words[0], opts.wordSpacing).split("\n");
-	var in_overlay = false;
-	for (var i = 0; i < lines.length; i++) {
-	  if (lines[i].charAt(0) != '%' && lines[i].charAt(1) != ':') {
-		var new_line = "";
-		var bar = 0;
-		if (in_overlay) {
-			bar = lines[i].indexOf("|");
-			in_overlay = false;
-		}
-		for (var amp = lines[i].indexOf("&"); amp > 0; amp = lines[i].indexOf("&", bar)) {
-			new_line += lines[i].substring(bar, amp)
-			bar = lines[i].indexOf("|", amp);
-			if (bar <= 0) {
-				bar = lines[i].length;
-				in_overlay = true;
-			}
-		}
-		new_line += lines[i].substring(bar);
-		new_line = new_line.replaceAll("!sp2!y", "|");
-		layout_music += new_line + "\n"
-	  } else if (lines[i].length > 0) {
-	    layout_music += lines[i] + "\n";
-	  }
-	}
+function update_music_seqno(music) {
 	abc_seq++;
-	layout_music = layout_music.replace("X:1", "X:" + abc_seq + "\nI:linebreak <none>");
-	//console.log(layout_music);
-
-	var div = document.getElementById("score_view_main");
-	set_music(div, layout_music);
+	//return music.replace(/X:\d+ +/, "X:" + (abc_seq + "    ").substring(0, 4));
+	return music.replace(/X:\d+/, "X:" + abc_seq);
 }
 
-function loadMusic(tryno) {
-	if (tryno > 20) {
-		console.log("loadMusic failed");
+function displayMusic(tryno) {
+	if (tryno > 200) {
+		console.log("displayMusic failed");
 		return;
 	}
-	var div = document.getElementById("score_view_main");
+    if (abc2svg.music == null) {
+		// dom_loaded (from abcweb-1) not complete
+		log_try("displayMusic", tryno);
+		setTimeout(displayMusic, 5, (tryno == null ? 1 : tryno + 1));
+		return;
+    }
+	fillMusicScores();
+	var spacings = ["normal", "padded"];
+	for (var i = 0; i < spacings.length; i++) {
+		fillBarAlignedMusic(spacings[i]);
+		fillLayoutMusic(spacings[i]);
+		fillAutoAlignedMusic(spacings[i]);
+	}
+	fillEndWords();
+	selectBestLayout();
+	fillPresentationMusic();
+}	
+
+function fillMusicScores(tryno) {
+	if (tryno > 200) {
+		console.log("fillMusicScores failed");
+		return;
+	}
+	var div1 = document.getElementById("no_words_score");
+	var tune1 = get_tune(div1);
+	var div2 = document.getElementById("codewords_score");
+	var tune2 = get_tune(div2);
+	if (tune1 == null || tune2 == null || data.preprocessed_music == null) {
+		// dom_loaded or parse_music_data not complete
+		log_try("fillMusicScores", tryno);
+		setTimeout(fillMusicScores, 5, (tryno == null ? 1 : tryno + 1));
+		return;
+    }
+	var new_music = data.preprocessed_music;
+	set_music(div2, update_music_seqno(new_music));
+
+	new_music = replace_words(new_music, null, "normal");
+	set_music(div1, update_music_seqno(new_music));
+}
+
+function fillBarAlignedMusic(spacing, tryno) {
+	if (tryno > 200) {
+		console.log("fillBarAlignedMusic failed");
+		return;
+	}
+	var div = document.getElementById("codewords_score");
 	var tune = get_tune(div);
-	if (tune == null) {
-		setTimeout(loadMusic, 25, (tryno == null ? 1 : tryno + 1));
+	var music = get_music(tune);
+	if (tune == null || get_music_id(music) == 1) {
+		// set_music in fillMusicScores not complete
+		log_try("fillBarAlignedMusic", tryno);
+		setTimeout(fillBarAlignedMusic, 5, spacing, (tryno == null ? 1 : tryno + 1));
+		return;
+    }
+
+	prepare_music(div);
+	
+	var codes = {};
+	for (var i = 0; i < data.stanzas.length; i++) {
+		if (codes[data.stanzas[i].partname] == null) {
+			codes[data.stanzas[i].partname] = [data.stanzas[i].firstCode.toUpperCase()];
+		} else {
+			codes[data.stanzas[i].partname].push(data.stanzas[i].firstCode.toUpperCase());
+		}
+	}
+	
+	var unique_partnames = Object.keys(codes);
+	var insert_points = [];
+	var abcr_names = Object.keys(abc2svg.codes[tune]);
+	for (i = 0; i < unique_partnames.length; i++) {
+		var code = codes[unique_partnames[i]].toSorted()[0];
+		var pos = 99999;
+		for (var j = 0; j < abcr_names.length; j++) {
+			if (abc2svg.codes[tune][abcr_names[j]] == code) {
+				var n = parseInt(abcr_names[j].substring(4));
+				pos = Math.min(pos, n);
+			}
+		}
+		if (pos < 99999) {
+			insert_points.push(pos);
+		}
+	}
+	
+	insert_points.sort((a,b) => a[0] - b[0]);
+	
+	var new_music = "";
+	var start = 0;
+	for (i = 0; i < unique_partnames.length; i++) {
+		var code = codes[unique_partnames[i]].toSorted()[0];
+		var partname = unique_partnames[i].toUpperCase();
+		if (code.toUpperCase() == "A1" && partname == "VERSES") {
+			partname = "VERSE nn";
+		}
+		new_music += music.substring(start, insert_points[i]) + "[P:" + partname + "]"
+		start = insert_points[i];
+	}
+	new_music += music.substring(start);
+	
+	data.presentation_music = new_music;
+	
+	new_music = new_music.replace("[P:VERSE nn]", "");
+
+	//var new_music = data.preprocessed_music;
+	if (opts.wordsShown == NONE) {
+		new_music = replace_words(new_music, null, spacing);
+	} else if (opts.wordsShown == HYMN) {
+		new_music = replace_words(new_music, data.parsed_words[0], spacing);
+	}
+	var div = document.getElementById(spacing + "_bar_score");
+	set_music(div, update_music_seqno(new_music));
+}
+
+function fillLayoutMusic(spacing, tryno) {
+	if (tryno > 200) {
+		console.log("fillLayoutMusic failed");
+		return;
+	}
+	var div = document.getElementById(spacing + "_bar_score");
+	var tune = get_tune(div);
+	var music = get_music(tune);
+	if (tune == null || get_music_id(music) == 1) {
+		// set_music in fillBarAlignedMusic not complete 
+		log_try("fillLayoutMusic", tryno);
+		setTimeout(fillLayoutMusic, 5, spacing, (tryno == null ? 1 : tryno + 1));
+		return;
+	}
+
+	abc2svg.init_tune(tune);
+	
+	var voice_starts = [];
+	var split_points = [];
+	var current_start = [];
+	var current_end = [];
+	var in_tie = [];
+	var max_times = [];
+	var start = i;
+	var voice = 0;
+	for (var i = music.indexOf("\nV:", start); i > 0; i = music.indexOf("\nV:", start)) {
+		start = i + 5;
+		voice_starts.push(start);
+		current_start.push(0);
+		current_end.push(0);
+		in_tie.push(false);
+		max_times.push(0);
+	}
+	
+	for (var sym = abc2svg.abc.tunes[tune][0]; sym.ts_next != null; sym = sym.ts_next) {
+		var voice = 0;
+		while (voice < voice_starts.length && (voice_starts[voice] == null || voice_starts[voice] < sym.istart)) {
+			voice++;
+		}
+		voice--;
+		if (sym.type == abc2svg.C.NOTE || sym.type == abc2svg.C.REST) {
+			current_start[voice] = parseInt(sym.istart);
+			current_end[voice] = parseInt(sym.iend);
+			in_tie[voice] = (sym.ti1 == true)
+			max_times[voice] = Math.max(max_times[voice], sym.time);
+			var equal_times = true;
+			var all_ties = true;
+			var no_ties = true;
+			for (var i = 0; i < data.voices.length; i++) {
+				if (in_tie[i]) {
+					no_ties = false;
+				} else {
+					all_ties = false;
+				}
+				if (Math.abs(max_times[i] - sym.time) > .0000001) {
+					equal_times = false;
+				}
+			}
+			if (equal_times && no_ties && sym.time > 0 && sym.time * 4 == Math.floor(sym.time * 4)) {
+				for (var i = 0; i < data.voices.length; i++) {
+					split_points.push([current_start[i], 1]);
+				}
+			}
+			if (all_ties) {
+				for (var i = 0; i < data.voices.length; i++) {
+					split_points.push([current_end[i], 0]);
+				}
+			}
+		}
+	}
+	
+	split_points.sort((a,b) => a[0] - b[0]);
+	
+	var new_music = "";
+	var start = 0;
+	for (i = 0; i < split_points.length; i++) {
+		var pos = split_points[i][0];
+		while (pos > 0 && "([{".indexOf(music.charAt(pos-1)) >= 0) {
+			pos--;
+		}
+		var type = (split_points[i][1] == 0 ? "JOIN" : "SPLIT");
+		new_music += music.substring(start, pos) + type;
+		start = pos;
+	}
+	new_music += music.substring(start);
+	new_music = new_music.replace("\n", "\nI:linebreak <none>\n");
+	var len = 0;
+	var barno = 1001;
+	//new_music = new_music.replaceAll(/SPLIT\s+SPLIT/g, "SPLIT");
+	new_music = new_music.replaceAll(/JOIN\s+\|\s+SPLIT/g, "JOIN|");
+	new_music = new_music.replaceAll(/JOIN\s+SPLIT/g, "JOIN");
+	new_music = new_music.replaceAll(/\|\s+SPLIT/g, "SPBAR| ");
+	new_music = new_music.replaceAll(/SPLIT\s\|/g, "SPBAR| ");
+	new_music = new_music.replaceAll(/SPLIT\|/g, "SPBAR|");
+	new_music = new_music.replaceAll(/JOIN\s+\|/g, " !join!{CCCC}");
+	new_music = new_music.replaceAll(/JOIN\|/g, "!join!{CCCC}");
+	new_music = new_music.replaceAll(/JOIN/g, "");
+
+	new_music = new_music.replaceAll(/z\s+\|/g, "!temp!z/4z/4z/4z/4|");
+	new_music = new_music.replaceAll(/z\/2/g, "!temp!z/4z/4");
+	while (new_music.length != len) {
+		len = new_music.length;
+		new_music = new_music.replace("SPBAR", "[I:tieheight 1." + barno + "]!spb!y");
+		barno++;
+	}
+	len = 0;
+	while (new_music.length != len) {
+		len = new_music.length;
+		new_music = new_music.replace("SPLIT", "[I:tieheight 1." + barno + "]!sp!y|");
+		barno++;
+	}
+
+	//new_music = new_music.replace(/X:\d+/, "X:1");
+	//data.auto_aligned_music = new_music;
+	//if (opts.wordsShown == NONE) {
+	//	new_music = replace_words(new_music, null, "normal");
+	//} else if (opts.wordsShown == HYMN) {
+	//	new_music = replace_words(new_music, data.parsed_words[0], opts.wordSpacing);
+	//}
+	//console.log(new_music);
+
+	var div = document.getElementById(spacing + "_layout_score");
+	set_music(div, update_music_seqno(new_music));
+}
+
+function fillAutoAlignedMusic(spacing, tryno) {
+	if (tryno > 200) {
+		console.log("fillAutoAlignedMusic failed");
+		return;
+	}
+	var div = document.getElementById(spacing + "_layout_score");
+	var tune = get_tune(div);
+	var music = get_music(tune);
+	if (tune == null || get_music_id(music) == 1) {
+		// set_music in fillLayoutMusic not complete 
+		log_try("fillAutoAlignedMusic", tryno);
+		setTimeout(fillAutoAlignedMusic, 5, spacing, (tryno == null ? 1 : tryno + 1));
 		return;
 	}
 	
-	if (data.preprocessed_music != null) {
-		var lines = ("\n" + data.preprocessed_music).split("\n");
+	var warnings = div.getElementsByTagName("pre");
+	for (var i = 0; i < warnings.length; i++) {
+		warnings[i].style.display = NONE;
+	}
+	
+	var lines = music.split("\n");
+	
+	//lines[0] = "X:1";
+	lines[1] = "I:linebreak $";
+
+	lines_with_ties = [];
+	for (var i = 3; i < lines.length; i++) {
+		if (lines[i].indexOf("tieheight" > 0)) {
+			lines_with_ties.push(i);
+		}
+	}
+
+	var prev_rect = null;
+	for (var sym = abc2svg.abc.tunes[tune][0]; sym.ts_next != null; sym = sym.ts_next) {
+		var rects = div.getElementsByClassName("abcr _" + sym.istart + "_");
+		if (rects.length > 0) {
+			var rect = rects[0];
+			if (prev_rect != null && rect.parentNode != prev_rect.parentNode) {
+				var barno = ("" + Math.round(sym.fmt.tieheight * 10000)).substring(1);
+				//console.log("[I:tieheight 1." + barno + "] !sp2!y");
+				for (var i = 0; i < lines_with_ties.length; i++) {
+					lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replace("[I:tieheight 1." + barno + "]!spb!y\|", "|$");
+					lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replace("[I:tieheight 1." + barno + "]!sp!y\|", "$");
+				}
+			}
+			prev_rect = rect;
+		}
+	}
+	for (var i = 0; i < lines_with_ties.length; i++) {
+		lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replaceAll(/\[I:tieheight ......\]!spb!y\|/g, "|");
+		lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replaceAll(/\[I:tieheight ......\]!sp!y\|/g, "");
+	}
+	
+	var new_music = "";
+	for (var i = 0; i < lines.length; i++) {
+		new_music += lines[i] + "\n";
+	}
+	new_music = new_music.replaceAll("!join!{CCCC}", "|");
+	new_music = new_music.replaceAll("!temp!z/4z/4z/4z/4", "z");
+	new_music = new_music.replaceAll("!temp!z/4z/4", "z/2");
+
+	var div = document.getElementById(spacing + "_auto_score");
+	set_music(div, update_music_seqno(new_music));
+}
+/*
+function fillPaddedMusic(tryno) {
+	console.log("start fillPaddedMusic");
+	if (tryno > 200) {
+		console.log("fillPaddedMusic failed");
+		return;
+	}
+	var div = document.getElementById("auto_aligned_score");
+	var tune = get_tune(div);
+	var music = get_music(tune);
+	if (tune == null || get_music_id(music) == 1) {
+		// set_music in fillAutoAlignedMusic not complete
+		console.log("fillPaddedMusic try " + tryno);
+		setTimeout(fillPaddedMusic, 10, (tryno == null ? 1 : tryno + 1));
+		return;
+	}
+
+	
+	var lines = music.split("\n");
+
+	var new_music = "";
+	var in_words = false;
+	for (var i = 0; i < lines.length; i++) {
+		if (lines[i].substring(0,2) == "w:" || (lines[i].substring(0,2) == "+:" && in_words)) {
+			in_words = true;
+			new_music += lines[i].substring(0,2) + addSpaces(lines[i].substring(2), "padded") + "\n";
+		} else {
+			in_words = false;
+			new_music += lines[i] + "\n";
+		}
+	}
+
+	abc_seq++;
+	new_music = new_music.replace(/X:\d+/, "X:" + abc_seq);
+	
+	var div = document.getElementById("padded_score");
+	set_music(div, new_music);
+}
+*/	
+
+function fillEndWords(tryno) {
+	if (tryno > 200) {
+		console.log("fillEndWords failed");
+		return;
+	}
+	var div = document.getElementById("normal_bar_score");
+	var tune = get_tune(div);
+	var music = get_music(tune);
+	if (tune == null || get_music_id(music) == 1) {
+		log_try("fillEndWords", tryno);
+		setTimeout(fillEndWords, 5, (tryno == null ? 1 : tryno + 1));
+		return;
+	}
+/*
+	if (data.processed_music == null) {
+		var lines = (data.music_with_split_points).split("\n");
 		
 		lines[0] = "X:1";
 		lines[1] = "I:linebreak $";
 
 		lines_with_ties = [];
-		for (var i = 2; i < lines.length; i++) {
+		for (var i = 3; i < lines.length; i++) {
 			if (lines[i].indexOf("tieheight" > 0)) {
 				lines_with_ties.push(i);
 			}
@@ -1470,27 +1827,35 @@ function loadMusic(tryno) {
 			if (rects.length > 0) {
 				var rect = rects[0];
 				if (prev_rect != null && rect.parentNode != prev_rect.parentNode) {
-					var barno = Math.round(sym.fmt.tieheight * 10000) - 10000;
+					var barno = ("" + Math.round(sym.fmt.tieheight * 10000)).substring(1);
 					//console.log("[I:tieheight 1." + barno + "] !sp2!y");
 					for (var i = 0; i < lines_with_ties.length; i++) {
-						lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replace("[I:tieheight 1." + barno + "] !sp2!y", "$");
+						lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replace("[I:tieheight 1." + barno + "]!spb!y\|", "|$");
+						lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replace("[I:tieheight 1." + barno + "]!sp!y\|", "$");
 					}
 				}
 				prev_rect = rect;
 			}
 		}
 		for (var i = 0; i < lines_with_ties.length; i++) {
-			lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replaceAll(/.I:tieheight ....... !sp2!y/g, "");
+			lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replaceAll(/\[I:tieheight ......\]!spb!y\|/g, "|");
+			lines[lines_with_ties[i]] = lines[lines_with_ties[i]].replaceAll(/\[I:tieheight ......\]!sp!y\|/g, "");
 		}
 		
 		var new_music = "";
 		for (var i = 0; i < lines.length; i++) {
 			new_music += lines[i] + "\n";
 		}
+		new_music = new_music.replaceAll("!join!{CCCC}", "|");
+		new_music = new_music.replaceAll("!temp!z/4z/4z/4z/4", "z");
+		new_music = new_music.replaceAll("!temp!z/4z/4", "z/2");
+		
 		data.processed_music = new_music;
-		data.preprocessed_music = null;
 	}
 	
+	var new_music = data.processed_music;
+	*/
+	/*
 	var new_music = "";
 	if (opts.wordsShown == CODES) {
 		new_music = data.processed_music;
@@ -1499,17 +1864,17 @@ function loadMusic(tryno) {
 	} else {
 		new_music = replace_words(data.processed_music, data.parsed_words[0], opts.wordSpacing);
 	}
+	*/
 	
-	abc_seq++;
-	new_music = new_music.replace("X:1", "X:" + abc_seq);
+	//abc_seq++;
+	//new_music = new_music.replace("X:1", "X:" + abc_seq);
+	//console.log(new_music);
 
-	var div = document.getElementById("score_view_main");
-	if (!DEBUG_LAYOUT) {
-		set_music(div, new_music);
-		if (opts.wordsShown == HYMN) {
-			prepare_music(div);
-		}
-	}
+	//var div = document.getElementById("score_view_main");
+	//set_music(div, new_music);
+	//if (opts.wordsShown == HYMN) {
+		//prepare_music(div);
+	//}
 	var svgs = div.getElementsByTagName("svg");
 	if (svgs.length > 0) {
 		Pagesize = parseInt(svgs[0].getAttribute("width").replace("px", "")) + 50;
@@ -1561,8 +1926,20 @@ function loadMusic(tryno) {
 		end_words_div.appendChild(table);
 		end_words_div.appendChild(document.createElement("br"));
 	}
+}
 
-	var present_music = data.processed_music.replaceAll("I:linebreak $", "I:linebreak <none>").replaceAll(" $", " ");
+function fillPresentationMusic(tryno) {
+	if (tryno > 200) {
+		console.log("fillPresentationMusic failed");
+		return;
+	}
+	if (data.presentation_music == null) {
+		log_try("fillPresentationMusic", tryno);
+		setTimeout(fillPresentationMusic, 10, (tryno == null ? 1 : tryno + 1));
+		return;
+	}
+	
+	var presentation_music = data.presentation_music.replaceAll("I:linebreak $", "I:linebreak <none>").replaceAll(" $", " ");
 	
 	Present_main.style.transform = "";
 	Present_main.style.height = "";
@@ -1576,40 +1953,125 @@ function loadMusic(tryno) {
 		div.style.width = "";
 		div.style.display = "";
 		//console.log("on " + v);
-		var new_music = replace_words(present_music, data.parsed_words[v + 1], "present");
+		var new_music = replace_words(presentation_music, data.parsed_words[v + 1], "present");
+		if (v == 0) {
+			new_music = new_music.replace("[P:VERSE nn]", "");
+		} else {
+			new_music = new_music.replace("[P:VERSE nn]", "[P:VERSE " + v + "]");
+		}
 		var lines = new_music.split("\n");
 		new_music = "";
 		for (var i = 0; i < lines.length; i++) {
-			if (lines[i].substr(0,2) == "X:") {
-			  abc_seq++;
-			  new_music += "X:" + abc_seq + "\n";
-			} else if (lines[i].substr(0,12) == "%%pagewidth ") {
-			  new_music += "%%pagewidth 2000cm\n%%stretchlast 0\n%%notespacingfactor 1.5, 50\n";
+			if (lines[i].substr(0,12) == "%%pagewidth ") {
+				new_music += "%%pagewidth 2000cm\n%%stretchlast 0\n%%notespacingfactor 1.5, 50\n";
 			} else {
 				new_music += lines[i] + "\n";
 			}
-	  }
-	  //console.log(v + ": " + new_music)
-	  var div2 = div.getElementsByTagName("div")[0];
-	  set_music(div, new_music);
-	  if (opts.wordsShown == HYMN) {
-		prepare_music(div);
-	  }
-      var svgs = div2.getElementsByTagName("svg");
-	  if (svgs.length > 0) {
-		  var tspans = svgs[1].getElementsByTagName("tspan");
-		  for (var i = 0; i < tspans.length; i++) {
-			if (tspans[i].textContent == "=") {
-			  tspans[i].parentNode.style.display = NONE;
+		}
+		//console.log(v + ": " + new_music)
+		var div2 = div.getElementsByTagName("div")[0];
+		set_music(div, update_music_seqno(new_music));
+		//if (opts.wordsShown == HYMN) {
+		//prepare_music(div);
+		//}
+		/*
+		var svgs = div2.getElementsByTagName("svg");
+		if (svgs.length > 0) {
+			var tspans = svgs[1].getElementsByTagName("tspan");
+			for (var i = 0; i < tspans.length; i++) {
+				if (tspans[i].textContent == "=") {
+					tspans[i].parentNode.style.display = NONE;
+				}
 			}
-		  }
-	  }
-	  v++;
-	  div = document.getElementById("v" + v);
+		}
+		*/
+		v++;
+		div = document.getElementById("v" + v);
     }
 	
+	//updateView();
+	//fully_loaded = true;
+}
+
+function selectBestLayout(tryno) {
+	var div1 = document.getElementById("normal_auto_score");
+	var tune1 = get_tune(div1);
+	var music1 = get_music(tune1);
+	var div2 = document.getElementById("padded_auto_score");
+	var tune2 = get_tune(div2);
+	var music2 = get_music(tune2);
+	if (tune1 == null || get_music_id(music1) == 1 || tune2 == null || get_music_id(music2) == 1) {
+		log_try("selectBestLayout", tryno);
+		setTimeout(selectBestLayout, 5, (tryno == null ? 1 : tryno + 1));
+		return;
+	}
+
+	var unfiltered_divs = document.getElementsByClassName("score_option");
+	var divs = []
+	for (var i = 0; i < unfiltered_divs.length; i++) {
+		if (unfiltered_divs[i].id != "no_words_score" && unfiltered_divs[i].id != "codewords_score") {
+			divs.push(unfiltered_divs[i]);
+		}
+	}
+	var line_counts = [];
+	var smallest_line_count = 999;
+	var max_deviations = [];
+	var rects_count = document.getElementById("normal_bar_score").getElementsByTagName("rect").length;
+	for (var i = 0; i < divs.length; i++) {
+		var svgs = divs[i].getElementsByTagName("svg");
+		// svg[0] is the title block, the rest contain note rects
+		var line_count = svgs.length - 1;
+		line_counts.push(line_count);
+		smallest_line_count = Math.min(smallest_line_count, line_count);
+		var avg_rects_per_line = rects_count / line_count;
+		max_deviations.push(0);
+		for (var j = 1; j < svgs.length; j++) {
+			var deviation = Math.abs(svgs[j].getElementsByTagName("rect").length - avg_rects_per_line);
+			//console.log(divs[i].id + " line " + j + ": " + deviation)
+			max_deviations[i] = Math.max(max_deviations[i], deviation);
+		}
+	}
+	var smallest_max_deviation = 999;
+	for (var i = 0; i < divs.length; i++) {
+		if (line_counts[i] == smallest_line_count) {
+			if (max_deviations[i] <= smallest_max_deviation) {
+				 smallest_max_deviation = max_deviations[i];
+			}
+		}
+	}
+	//console.log(max_deviations)
+
+	var best_layouts = ":";
+	for (var i = 0; i < divs.length; i++) {
+		if (line_counts[i] == smallest_line_count && max_deviations[i] == smallest_max_deviation) {
+			best_layouts += divs[i].id + ":";
+		}
+	}
+	
+	ordered_preferences = ["padded_auto_score", "normal_auto_score", "padded_bar_score", "normal_bar_score"];
+	for (var i = 0; i < ordered_preferences.length; i++) {
+		if (best_layouts.indexOf(ordered_preferences[i]) > 0) {
+			Best_layout = ordered_preferences[i];
+			break;
+		}
+	}
+
+	if (opts.manageBreaksAndSpacing) {
+		opts.breakOnlyOnBars = (Best_layout.indexOf("bar") >= 0);
+		opts.forceSpaceBetweenWords = (Best_layout.indexOf("padded") >= 0);
+		document.getElementById("break_only_on_bars").checked = opts.breakOnlyOnBars;
+		document.getElementById("force_space_between_words").checked = opts.forceSpaceBetweenWords;
+	}
+	
 	updateView();
-	fully_loaded = true;
+
+/*
+	for (var i = 0; i < divs.length; i++) {
+		if (divs[i].id != Best_layout) {
+			divs[i].style.backgroundColor = "#dddddd";
+		}
+	}
+	*/
 }
 
 function page_loaded() {
@@ -1666,14 +2128,47 @@ function page_loaded() {
   
 	abc2svg.no_midi = true;
   
-	if (!on_localhost() && window.location.hostname.indexOf("freehymns.org") < 0) {
+	if (!ON_LOCALHOST && window.location.hostname.indexOf("freehymns.org") < 0) {
 		var site_links = document.getElementsByClassName("site_link");
 		for (var i = 0; i < site_links.length; i++) {
 			site_links[i].textContent = site_links[i].textContent.replace("freehymns.org", window.location.hostname);
 		}
 	}
 
-	load_text_data();
+	load_text_data(text_data_loaded);
+}
+
+function text_data_loaded() {
+	parse_text_data();
+	load_music_data(music_data_loaded);
+}
+
+function music_data_loaded() {
+	fully_loaded = true;
+	parse_music_data();
+
+	fill_col2();
+	fill_text_view();
+	//fill_score_view();
+	reset_music_div("no_words_score");
+	reset_music_div("codewords_score");
+	reset_music_div("normal_bar_score");
+	reset_music_div("normal_layout_score");
+	reset_music_div("normal_auto_score");
+	reset_music_div("padded_bar_score");
+	reset_music_div("padded_layout_score");
+	reset_music_div("padded_auto_score");
+	fill_present_view();
+
+    changeTempo(0);
+
+	abc2svg.global_params = "%%soundfont ../akai_steinway.sf2";
+	//abc2svg.global_params = "%%soundfont ../SC55Piano_V2.js";
+	dom_loaded();
+	
+	//calcSplitPoints();
+	//layoutMusic();
+	displayMusic();
 }
 
 function get_folder_name(filename) {
@@ -1694,7 +2189,7 @@ function get_folder_name(filename) {
 	}
 }
 
-function load_text_data() {
+function load_text_data(callback) {
   var div = null;
   if (!fully_loaded) {
 	div = document.getElementById("text_data");
@@ -1732,16 +2227,11 @@ function load_text_data() {
 	  .catch((e) => console.error(e));
   } else {
 	data.raw_text = div.textContent;
-	parse_text_data();
-	text_data_loaded();
+	callback();
   }
 }
 
-function text_data_loaded() {
-	load_music_data();
-}
-
-function load_music_data() {
+function load_music_data(callback) {
   var div = null;
   if (!fully_loaded) {
 	div = document.getElementById("music_data");
@@ -1773,31 +2263,24 @@ function load_music_data() {
 	  .catch((e) => console.error(e));
   } else {
 	data.raw_music = div.textContent;
-	music_data_loaded();
+	callback();
   }
 }
 
-function music_data_loaded() {
-	parse_music_data();
-
-	fill_col2();
-	fill_text_view();
-	fill_score_view()
-	fill_present_view();
-
-    changeTempo(0);
-
-	abc2svg.global_params = "%%soundfont ../akai_steinway.sf2";
-	//abc2svg.global_params = "%%soundfont ../SC55Piano_V2.js";
-	dom_loaded();
-
-	layoutMusic();
-	
-	loadMusic();
-}
-
+/*
 function fill_score_view() {
 	var div = document.getElementById("score_view_main");
+	while (div.firstChild != null) {
+		div.removeChild(div.firstChild);
+	}
+	var script = document.createElement("script");
+	script.setAttribute("type", "text/vnd.abc");
+	script.appendChild(document.createTextNode(NULL_ABC));
+	div.appendChild(script);
+}
+*/
+function reset_music_div(id) {
+	var div = document.getElementById(id);
 	while (div.firstChild != null) {
 		div.removeChild(div.firstChild);
 	}
@@ -2349,8 +2832,9 @@ function changeView(new_view, wordsShown) {
 		if (changed) {
 			opts.scoreChanged = false;
 			parse_music_data();
-			layoutMusic();
-			loadMusic();
+			//layoutMusic();
+			//loadMusic();
+			displayMusic();
 			return;
 		}
 	}
@@ -2358,18 +2842,36 @@ function changeView(new_view, wordsShown) {
 }
 
 function updateView() {
-  Score_view.style.display = (View == SCORE ? BLOCK : NONE);
-  Text_view.style.display = (View == TEXT ? BLOCK : NONE);
-  Presentation_view.style.display = (View == PRESENTATION ? BLOCK : NONE);
-  Col1.style.display = (View == PRESENTATION ? NONE : BLOCK);
-  
-  if (View == PRESENTATION) {
-	col1_dismissed = true;
-	if (Present_main.style.transform == "") {
-		update_presentation_divs();
+	document.getElementById("no_words_score").style.display = (opts.wordsShown == NONE ? BLOCK : NONE);
+	document.getElementById("codewords_score").style.display = (opts.wordsShown == CODES ? BLOCK : NONE);
+	document.getElementById("normal_bar_score").style.display = (opts.wordsShown == HYMN && !opts.forceSpaceBetweenWords && opts.breakOnlyOnBars ? BLOCK : NONE);
+	document.getElementById("normal_auto_score").style.display = (opts.wordsShown == HYMN && !opts.forceSpaceBetweenWords && !opts.breakOnlyOnBars ? BLOCK : NONE);
+	document.getElementById("padded_bar_score").style.display = (opts.wordsShown == HYMN && opts.forceSpaceBetweenWords && opts.breakOnlyOnBars ? BLOCK : NONE);
+	document.getElementById("padded_auto_score").style.display = (opts.wordsShown == HYMN && opts.forceSpaceBetweenWords && !opts.breakOnlyOnBars ? BLOCK : NONE);
+/*
+	if (playing) {
+		var divs = document.getElementsByClassName("score_option");
+		for (var i = 0; i < divs.length; i++) {
+			if (divs[i].style.display == BLOCK) {
+				var tune = get_tune(divs[i]);
+				abc2svg.tune_index_playing = tune;
+				break;
+			}
+		}
 	}
-  }
-  redraw(false);
+*/
+	Score_view.style.display = (View == SCORE ? BLOCK : NONE);
+	Text_view.style.display = (View == TEXT ? BLOCK : NONE);
+	Presentation_view.style.display = (View == PRESENTATION ? BLOCK : NONE);
+	Col1.style.display = (View == PRESENTATION ? NONE : BLOCK);
+  
+	if (View == PRESENTATION) {
+		col1_dismissed = true;
+		if (Present_main.style.transform == "") {
+			update_presentation_divs();
+		}
+	}
+	redraw(false);
 }
 
 function update_presentation_divs(tryno) {
@@ -2386,8 +2888,9 @@ function update_presentation_divs(tryno) {
         var gs = div.getElementsByTagName("g");
         var g_rect = gs[0].getBoundingClientRect();
 		if (music_rect.width == 0 || g_rect.width == 0) {
-			if (tryno == null || tryno < 10) {
-				setTimeout(update_presentation_divs, ((tryno == null) ? 1 : tryno + 1));
+			if (tryno == null || tryno < 200) {
+				console.log("update_presentation_divs try " + tryno);
+				setTimeout(update_presentation_divs, 5, ((tryno == null) ? 1 : tryno + 1));
 				return;
 			}
 		}
@@ -2431,28 +2934,57 @@ function update_presentation_divs(tryno) {
 	Present_footer.style.top = (window.innerHeight - rect.bottom + rect.top - 25) + "px";
 }
 
+function breaksOrSpacingChanged() {
+	var boob = document.getElementById("break_only_on_bars");
+	var fsbw = document.getElementById("force_space_between_words");
+	var mbas = document.getElementById("manage_breaks_and_spacing");
+	if (window.event) {
+		if (window.event.target == mbas) {
+			opts.manageBreaksAndSpacing = mbas.checked;
+			if (opts.manageBreaksAndSpacing) {
+				opts.breakOnlyOnBars = (Best_layout.indexOf("bar") >= 0);
+				opts.forceSpaceBetweenWords = (Best_layout.indexOf("padded") >= 0);
+				boob.checked = opts.breakOnlyOnBars;
+				fsbw.checked = opts.forceSpaceBetweenWords;
+			} else {
+				opts.breakOnlyOnBars = boob.checked;
+				opts.forceSpaceBetweenWords = fsbw.checked;
+			}
+		} else if (window.event.target == boob) {
+			opts.breakOnlyOnBars = boob.checked;
+		} else if (window.event.target == fsbw) {
+			opts.forceSpaceBetweenWords = fsbw.checked;
+		}
+	}
+	boob.disabled = opts.manageBreaksAndSpacing;
+	fsbw.disabled = opts.manageBreaksAndSpacing;
+	document.getElementById(boob.id + "_label").className = (opts.manageBreaksAndSpacing ? "disabled_control" : "");
+	document.getElementById(fsbw.id + "_label").className = (opts.manageBreaksAndSpacing ? "disabled_control" : "");
+	updateView();
+}
+
 function changeTempo(amount) {
-  tempo += amount;
-  Tempo_value.textContent = tempo;
-  if (abcplay) {
-    abcplay.set_speed(tempo / data.music_fields[TEMPO][0]);
-  }
+	tempo += amount;
+	Tempo_value.textContent = tempo;
+	if (abcplay) {
+		abcplay.set_speed(tempo / data.music_fields[TEMPO][0]);
+	}
 }
 
 function resetMusic() {
-  playing = false;
-  noSleep.disable();
-  //if (wakelock != null) {
-  //  wakelock.release().then(() => {wakelock = null; Trigram.style.backgroundColor = ""});
-  //}
-  abc2svg.playsection(null);
-  Play_pause_resume.value = "Play";
-  document.getElementById("play_pause_resume_link").textContent = "Play";
-  document.getElementById("mobile_menu").style.display = NONE;
-  abc2svg.tune_index_playing = null;
-  abc2svg.verse_playing = null;
-  abc2svg.follow_speed = null;
-  window.scroll(0,0);
+	playing = false;
+	noSleep.disable();
+	//if (wakelock != null) {
+	//  wakelock.release().then(() => {wakelock = null; Trigram.style.backgroundColor = ""});
+	//}
+	abc2svg.playsection(null);
+	Play_pause_resume.value = "Play";
+	document.getElementById("play_pause_resume_link").textContent = "Play";
+	document.getElementById("mobile_menu").style.display = NONE;
+	abc2svg.tune_index_playing = null;
+	abc2svg.verse_playing = null;
+	abc2svg.follow_speed = null;
+	window.scroll(0,0);
 }
 
 function calc_follow_speed() {
@@ -2669,7 +3201,18 @@ function play_next() {
 		verse = parseInt(part);
 	}
 
-	var div = document.getElementById(View == PRESENTATION ? "v" + verse : "score_view_main");
+	var div = null;
+	if (View == PRESENTATION) {
+		div = document.getElementById("v" + verse);
+	} else {
+		var divs = document.getElementsByClassName("score_option");
+		for (var i = 0; i < divs.length; i++) {
+			if (divs[i].style.display == BLOCK) {
+				div = divs[i];
+				break;
+			}
+		}
+	}
 	var tune = get_tune(div);
 	abc2svg.tune_index_playing = tune;
 	abc2svg.verse_playing = verse;

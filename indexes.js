@@ -50,7 +50,7 @@ function set_scroll_top(y, tryno) {
 
 function set_topic(new_topic) {
 	Topic = new_topic;
-	if (Topic != "" && Topic != "all") {
+	if (Topic != null && Topic != "null" && Topic != "" && Topic != "all") {
 		var new_title = Topic.charAt(0).toUpperCase() + Topic.substring(1) + " Hymns";
 		document.getElementById("index_title").textContent = new_title;
 		var divs = document.getElementsByTagName("div");
