@@ -39,6 +39,8 @@ svg {display:block; margin:0 auto}
 #score_verses_table td {padding-left: 5px}
 #loading {position:absolute; top:50%; left:50%; width:200px; height:200px}
 #loading svg {margin-top: -100px; margin-left: -100px}
+#resources_node div {padding-left:5px; padding-bottom:3px}
+#resources_node a {margin-left:15px; font-variant:petite-caps}
 .metadata_frame {border:2px,#eeeeee,solid; display:inline-block; overflow:hidden}
 .metadata_table th {text-align:left; font-weight:bold; vertical-align:top}
 .metadata_table td {vertical-align:top; padding-left:10px; overflow:hidden}

@@ -633,6 +633,16 @@ function set_music(div, music) {
 	}
 }
 
+function get_first_code_for_partname(partname) {
+	var codes = [];
+	for (var i = 0; i < data.stanzas.length; i++) {
+		if (data.stanzas[i].partname.toUpperCase() == partname.toUpperCase()) {
+			codes.push(data.stanzas[i].firstCode.toUpperCase());
+		}
+	}
+	return codes.toSorted()[0];
+}
+
 function prepare_music(div, tryno) {
 	if (tryno > 200) {
 		console.log("prepare_music failed");
@@ -726,6 +736,77 @@ function prepare_music(div, tryno) {
 		}
 	}
 	//console.log(maps);
+	
+	// Fix reprise line, if any
+	if (music.indexOf("0.~") > 0) {
+		var part_instruction = music.indexOf("[P:");
+		if (part_instruction > 0) {
+			var end = music.indexOf("]", part_instruction);
+			var partname = music.substring(part_instruction + 3, end);
+			for (var i = 0; i < texts.length; i++) {
+				var partname_text = texts[i];
+				if (partname_text.textContent == partname) {
+					partname_text.textContent = "";
+					var code = get_first_code_for_partname(partname);
+					var word_text = maps[0][code];
+					/*
+					var next_word_text = word_text;
+					var next_code = code;
+					while (next_word_text == word_text) {
+						next_code = next_code.charAt(0) + (parseInt(next_code.substring(1)) + 1);
+						next_word_text = maps[0][next_code];
+						if (next_word_text == null) {
+							log("y");
+						}
+					}
+					var word_x = parseInt(word_text.getAttribute("x"));
+					var width = parseInt(next_word_text.getAttribute("x")) - word_x;*/
+					var s = word_text.textContent;
+					//var word = s.substring(s.indexOf("0."));
+					//var letter_width = width / word.length;
+					if (code == "A1") {
+						var new_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+						new_text.setAttribute("class", word_text.getAttribute("class"));
+						//new_text.setAttribute("x", word_x - letter_width * (partname.length));
+						new_text.setAttribute("x", "25");
+						new_text.setAttribute("y", word_text.getAttribute("y"));
+						var tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+						tspan.setAttribute("font-style", "italic");
+						tspan.appendChild(document.createTextNode(partname.charAt(0) + partname.substring(1).toLowerCase() + ":"))
+						new_text.appendChild(tspan);
+						word_text.parentNode.appendChild(new_text);
+					}
+					word_text.textContent = s.replace("0. ", "    ");
+					for (var j = 0; j < data.stanzas.length; j++) {
+						if (data.stanzas[j].partname.toUpperCase() == partname.toUpperCase()) {
+							for (code in data.stanzas[j].map) {
+								word_text = maps[0][code];
+								if (word_text != null) {
+									var tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+									tspan.setAttribute("font-style", "italic");
+									tspan.textContent = word_text.textContent;
+									word_text.textContent = "";
+									word_text.appendChild(tspan);
+								}
+							}
+						}
+					}
+/*					
+					for (var e = word_text; e != null; e = e.nextElementSibling) {
+						if (e.tagName == "text") {
+							tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+							tspan.setAttribute("font-style", "italic");
+							tspan.textContent = e.textContent;
+							e.textContent = "";
+							e.appendChild(tspan);
+						}
+					}
+					*/
+					break;
+				}
+			}
+		}
+	}
 	
 	// Create index to address the svg rect elements of the notes by symbol index in the parsed tune data 
 	var music = null;
@@ -1080,7 +1161,8 @@ function parse_music_data() {
 						var v = data.stanzas[i].loVerse;
 						if (v == null) {
 							stanzas_by_seq_clef_verse[seq][1-c][data.verseCount + 1].push(i);
-						} else if (seq > 0 || opts.versesShown[v] == IN_SCORE) {
+						//} else if (seq > 0 || opts.versesShown[v] == IN_SCORE) {
+						} else if (seq == 0 || opts.versesShown[v] == IN_SCORE) {
 							stanzas_by_seq_clef_verse[seq][1-c][v].push(i);
 						}
 					}
@@ -1158,6 +1240,8 @@ function parse_music_data() {
 		}
 	}
 	
+	var first_code_for_verses = get_first_code_for_partname("Verses");
+	
 	var lines = data.raw_music.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
 	for (var i = 0; i < lines.length; i++) {
 	  if (lines[i].substr(0,2) == "w:") {
@@ -1184,12 +1268,13 @@ function parse_music_data() {
 			for (var j = 0; j < stanzas.length; j++) {
 				var new_words = template;
 				for (var k = 0; k < stanzas[j].length; k++) {
-					var v = data.stanzas[stanzas[j][k]].loVerse;
+					var stanza_data = data.stanzas[stanzas[j][k]];
+					var v = stanza_data.loVerse;
 					if (v == null) {
 						v = 0;
 					}
 					for (var code_no = codes.length - 1; code_no >= 0; code_no--) {
-						var word = data.stanzas[stanzas[j][k]].map[codes[code_no]];
+						var word = stanza_data.map[codes[code_no]];
 						if (word == "") {
 							new_words = new_words.replace(" " + codes[code_no], "");
 							new_words = new_words.replace(codes[code_no] + " ", "");
@@ -1210,8 +1295,11 @@ function parse_music_data() {
 							prefix += "&#x" + (0x200B + (n & 16) / 16).toString(16) + ";&#x" + (0xFE00 + (n & 15)).toString(16) + ";";
 							prefix += "&#x" + (0x200B + (m & 16) / 16).toString(16) + ";&#x" + (0xFE00 + (m & 15)).toString(16) + ";";
 							prefix += (dotted ? "&#x200B;" : "");
-							if (v > 0 && n == 0 && m == 1) {
-								prefix += data.verse_labels[v] + ".~";
+							//if (v > 0 && n == 0 && m == 1) {
+							//if (n == 0 && m == 1) {
+							if (codes[code_no] == first_code_for_verses) {
+								//prefix += (v==0 ? "0" : data.verse_labels[v]) + ".~";
+								prefix = (v==0 ? "0" : data.verse_labels[v]) + ".~" + prefix;
 							}
 							if (word == "*") {
 								word = "";
@@ -1379,9 +1467,12 @@ function addSpaces(words, spacing) {
 		return words.replaceAll("~ ", " ");
 	} else if (spacing == "padded") {
 		var parts = words.split(" ");
-		var new_words = parts[0];
-		for (var i = 1; i < parts.length; i++) {
-			new_words += " " + parts[i]
+		var new_words = "";
+		for (var i = 0; i < parts.length; i++) {
+			if (i > 0) {
+				new_words += " ";
+			}
+			new_words += parts[i]
 			if ("-_*".indexOf(parts[i].charAt(parts[i].length - 1)) < 0) {
 				new_words += "\u2009\u2009\u2009\u2009";
 			}
@@ -2216,7 +2307,10 @@ function load_text_data(callback) {
 	if (href.indexOf("/site") >= 0) {
 		url += "../";
 	}
-	url += "hymns/" + data.text_lang + "/" + get_folder_name(data.textID) + "/" + data.textID + ".txt?" + Math.ceil(Math.random() * 10000);
+	url += "hymns/" + data.text_lang + "/" + get_folder_name(data.textID) + "/" + data.textID + ".txt";
+	document.getElementById("download_text").href = url;
+	document.getElementById("download_text").setAttribute("download", data.textID + ".txt");
+	url += "?" + Math.ceil(Math.random() * 10000);
 	fetch(url)
 	  .then((res) => res.text())
 	  .then((txt) => {
@@ -2249,11 +2343,25 @@ function load_music_data(callback) {
 		}
 	}
 	console.assert(data.musicID != null, "Can't determine music file id.");
+
+	//addFieldValue(data.text_fields, "Alt Tune", data.musicID);
+	
+	if (data.text_fields["Alt Tune"] == null) {
+		data.text_fields["Alt Tune"] = [data.musicID];
+	} else {
+		if (!data.text_fields["Alt Tune"].includes(data.musicID)) {
+			data.text_fields["Alt Tune"].push(data.musicID);
+		}
+	}
+
 	var url = "../";
 	if (href.indexOf("/site") >= 0) {
 		url += "../";
 	}
-	url += "hymns/music/" + get_folder_name(data.musicID) + "/" + data.musicID + ".abc?" + Math.ceil(Math.random() * 10000);
+	url += "hymns/music/" + get_folder_name(data.musicID) + "/" + data.musicID + ".abc";
+	document.getElementById("download_music").href = url;
+	document.getElementById("download_music").setAttribute("download", data.musicID + ".abc");
+	url += "?" + Math.ceil(Math.random() * 10000);
 	fetch(url)
 	  .then((res) => res.text())
 	  .then((music) => {
@@ -2341,23 +2449,10 @@ function fill_col2() {
 	var arrangements = 1;
 	
 	addRadioRow(mat, "arrangement", data.musicID, true);
-
+	
 	var fields = Object.keys(data.text_fields).sort();
 	for (var i = 0; i < fields.length; i++) {
 		var values = data.text_fields[fields[i]].toSorted();
-		if (fields[i] == "Alt Tune") {
-			var found = false;
-			for (var j = 0; j < values.length; j++) {
-				if (values[j] == data.text_fields.Tune[0]) {
-					found = true;
-					break;
-				}
-			}
-			if (!found) {
-				values.push(data.text_fields.Tune[0]);
-				values.sort();
-			}
-		}
 		for (var j = 0; j < values.length; j++) {
 			var value = values[j];
 			if (fields[i] == "VarianT") {
@@ -2841,13 +2936,43 @@ function changeView(new_view, wordsShown) {
 	updateView();
 }
 
+function get_current_score_div() {
+	if (opts.wordsShown == NONE) {
+		return document.getElementById("no_words_score");
+	} else if (opts.wordsShown == CODES) {
+		return document.getElementById("codewords_score");
+	} else if (opts.wordsShown == HYMN && !opts.forceSpaceBetweenWords && opts.breakOnlyOnBars) {
+		return document.getElementById("normal_bar_score");
+	} else if (opts.wordsShown == HYMN && !opts.forceSpaceBetweenWords && !opts.breakOnlyOnBars) {
+		return document.getElementById("normal_auto_score");
+	} else if (opts.wordsShown == HYMN && opts.forceSpaceBetweenWords && opts.breakOnlyOnBars) {
+		return document.getElementById("padded_bar_score");
+	} else if (opts.wordsShown == HYMN && opts.forceSpaceBetweenWords && !opts.breakOnlyOnBars) {
+		return document.getElementById("padded_auto_score");
+	}
+/*
+	var divs = document.getElementsByClassName("score_option");
+	for (var i = 0; i < divs.length; i++) {
+		if (divs[i].style.display == BLOCK) {
+			return divs[i];
+		}
+	}
+*/
+}
+
 function updateView() {
-	document.getElementById("no_words_score").style.display = (opts.wordsShown == NONE ? BLOCK : NONE);
+	document.getElementById("view_resource").style.display = NONE;
+	/*document.getElementById("no_words_score").style.display = (opts.wordsShown == NONE ? BLOCK : NONE);
 	document.getElementById("codewords_score").style.display = (opts.wordsShown == CODES ? BLOCK : NONE);
 	document.getElementById("normal_bar_score").style.display = (opts.wordsShown == HYMN && !opts.forceSpaceBetweenWords && opts.breakOnlyOnBars ? BLOCK : NONE);
 	document.getElementById("normal_auto_score").style.display = (opts.wordsShown == HYMN && !opts.forceSpaceBetweenWords && !opts.breakOnlyOnBars ? BLOCK : NONE);
 	document.getElementById("padded_bar_score").style.display = (opts.wordsShown == HYMN && opts.forceSpaceBetweenWords && opts.breakOnlyOnBars ? BLOCK : NONE);
-	document.getElementById("padded_auto_score").style.display = (opts.wordsShown == HYMN && opts.forceSpaceBetweenWords && !opts.breakOnlyOnBars ? BLOCK : NONE);
+	document.getElementById("padded_auto_score").style.display = (opts.wordsShown == HYMN && opts.forceSpaceBetweenWords && !opts.breakOnlyOnBars ? BLOCK : NONE);*/
+	var score_div = get_current_score_div();
+	var divs = document.getElementsByClassName("score_option");
+	for (var i = 0; i < divs.length; i++) {
+		divs[i].style.display = (divs[i] == score_div ? BLOCK : NONE);
+	}
 /*
 	if (playing) {
 		var divs = document.getElementsByClassName("score_option");
@@ -2872,6 +2997,46 @@ function updateView() {
 		}
 	}
 	redraw(false);
+}
+
+function clean_music(music) {
+	var new_music = music.replace(/X:\d+/, "X:1");
+	//new_music = new_music.replaceAll(/\s*&#x20..;&#xfe..;&#x20..;&#xfe..;&#x20..;&#xfe..;/g, " ");
+	new_music = new_music.replaceAll(/&#x20..;&#xfe..;&#x20..;&#xfe..;&#x20..;&#xfe..;/g, "");
+	//new_music = new_music.replaceAll("w: ", "w:").replaceAll("+: ", "+:");
+	return new_music;
+}
+
+function view_resource(resource_text) {
+	var pre = document.getElementById("view_resource");
+	pre.textContent = resource_text;
+	var div = get_current_score_div();
+	div.style.display = NONE;
+	pre.style.display = BLOCK;
+}
+
+function view_text_resource() {
+	view_resource(data.raw_text);
+}
+
+function view_music_resource() {
+	view_resource(data.raw_music);
+}
+
+function view_score_resource() {
+	var div = get_current_score_div();
+	var tune = get_tune(div);
+	var music = clean_music(get_music(tune));
+	view_resource(music);
+}
+
+function on_download_score() {
+	var div = get_current_score_div();
+	var tune = get_tune(div);
+	var music = clean_music(get_music(tune));
+	var a = document.getElementById("download_score");
+	a.href = "data:data/abc;charset=UTF-8," + encodeURIComponent(music);
+	a.setAttribute("download", data.textID + "_Score.abc");
 }
 
 function update_presentation_divs(tryno) {
@@ -3205,6 +3370,8 @@ function play_next() {
 	if (View == PRESENTATION) {
 		div = document.getElementById("v" + verse);
 	} else {
+		div = get_current_score_div();
+		/*
 		var divs = document.getElementsByClassName("score_option");
 		for (var i = 0; i < divs.length; i++) {
 			if (divs[i].style.display == BLOCK) {
@@ -3212,6 +3379,7 @@ function play_next() {
 				break;
 			}
 		}
+		*/
 	}
 	var tune = get_tune(div);
 	abc2svg.tune_index_playing = tune;

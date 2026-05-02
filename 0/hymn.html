@@ -114,6 +114,21 @@
  <input type="button" value="View Presentation" onclick="updateView('presentation')">
 </div>
 -->
+<div id="resources_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Resources</span></span></div>
+<div id="resources_node" class="tree_node" style="display:none">
+ <span>Lyrics/metadata as text file:</span>
+ <div>
+  <a href="javascript:view_text_resource()">View</a> <a id="download_text" href="tbd">Download</a>
+ </div>
+ <span>Raw music data as .abc text file:</span>
+ <div>
+  <a href="javascript:view_music_resource()">View</a> <a id="download_music" href="tbd">Download</a>
+ </div>
+ <span>Current score as .abc text file:</span>
+ <div>
+  <a id="view_abc" href="javascript:view_score_resource()">View</a> <a id="download_score" href="tbd" onclick="on_download_score()">Download</a>
+ </div>
+</div>
 <div id="performance_title" class="tree_title"><span onclick="toggle_tree_node()"><span>&ndash;</span> <span>Performance</span></span></div>
 <div id="performance_node" class="tree_node">
  <div id="performance_plan_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Plan (Road map)</span></span></div>
@@ -123,7 +138,7 @@
  </div>
  <div id="samples_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Instrument</span></span></div>
  <div id="samples_node" class="tree_node" style="display:none">
-   <div><input type="radio" checked="checked"> <a href="https://www.polyphone.io/en/soundfonts/pianos/303-akai-steinway-iii">Akai-Steinway III by Dennis</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a></div>
+   <div><input type="radio" checked="checked"> <a href="https://www.polyphone.io/en/soundfonts/pianos/303-akai-steinway-iii">Akai-Steinway III by Denis</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a></div>
  </div>
  <div id="dynamics_title" class="tree_title"><span onclick="toggle_tree_node()"><span>+</span> <span>Dynamics</span></span></div>
  <div id="dynamics_node" class="tree_node" style="display:none">
@@ -157,6 +172,7 @@
 <div id="padded_bar_score" class="score_option" style="display:none"><!--type="text/vnd.abc"--></div>
 <div id="padded_layout_score" style="display:none; background-color:#cccccc"><!--type="text/vnd.abc"--></div>
 <div id="padded_auto_score" class="score_option" style="display:none"><!--type="text/vnd.abc"--></div>
+<pre id="view_resource" style="display:none"></pre>
 </div>
 <div id="score_view_end_words"></div>
 <div id="score_view_footer"><a class="site_link" href="..">freehymns.org</a><br></div>
