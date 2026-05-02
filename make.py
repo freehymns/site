@@ -89,6 +89,7 @@ for hymn_file in hymn_files:
 	hymn_id = hymn_file.split("/")[1].split(".")[0]
 	hymn_ids.append(hymn_id)
 	new_html = hymn_html.replace('//data.textID = ""', 'data.textID = "' + hymn_id + '"')
+	new_html = new_html.replace('<a id="download_text" href="tbd', '<a id="download_text" href="' + '../hymns/en/' + hymn_file)
 	new_html = new_html.replace("titles.html?", "titles.html?" + current_crc)
 
 	tune_id = None
@@ -153,8 +154,10 @@ for hymn_file in hymn_files:
 		tune_id = hymn_id
 	new_html = new_html.replace('//data.musicID = ""', 'data.musicID = "' + tune_id + '"')
 
-	tune_file = hymns_dir + "/music/" + get_dirname(tune_id) + "/" + tune_id + ".abc"
-	music = readfile(tune_file)
+	tune_path = "music/" + get_dirname(tune_id) + "/" + tune_id + ".abc"
+	new_html = new_html.replace('<a id="download_music" href="tbd', '<a id="download_music" href="' + '../hymns/' + tune_path)
+
+	music = readfile(hymns_dir + "/" + tune_path)
 
 	i = new_html.find("music_data")
 	if new_html[i-1] == "x":

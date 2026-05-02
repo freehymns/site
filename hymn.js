@@ -1603,10 +1603,12 @@ function fillBarAlignedMusic(spacing, tryno) {
 	
 	var codes = {};
 	for (var i = 0; i < data.stanzas.length; i++) {
-		if (codes[data.stanzas[i].partname] == null) {
-			codes[data.stanzas[i].partname] = [data.stanzas[i].firstCode.toUpperCase()];
-		} else {
-			codes[data.stanzas[i].partname].push(data.stanzas[i].firstCode.toUpperCase());
+		if (data.stanzas[i].partname != "_") {
+			if (codes[data.stanzas[i].partname] == null) {
+				codes[data.stanzas[i].partname] = [data.stanzas[i].firstCode.toUpperCase()];
+			} else {
+				codes[data.stanzas[i].partname].push(data.stanzas[i].firstCode.toUpperCase());
+			}
 		}
 	}
 	
@@ -1637,7 +1639,7 @@ function fillBarAlignedMusic(spacing, tryno) {
 		if (code.toUpperCase() == "A1" && partname == "VERSES") {
 			partname = "VERSE nn";
 		}
-		new_music += music.substring(start, insert_points[i]) + "[P:" + partname + "]"
+		new_music += music.substring(start, insert_points[i]) + "[P:" + partname + "]";
 		start = insert_points[i];
 	}
 	new_music += music.substring(start);
@@ -3346,7 +3348,7 @@ function play_next() {
 		part = part.substring(colon + 1);
 	}
 	var verse = 0;
-	var start_code = "A1";
+	var start_code = null;
 	var end_code = null;
 	var at = part.indexOf("@");
 	abc2svg.skip_repeats = (at == 0);
@@ -3390,33 +3392,39 @@ function play_next() {
 	//console.log("mystarttime: " + (Date.now() - mystarttime));
 	var start_rect = null; //abc2svg.abc.tunes[tune][0];
 	var end_rect = null;
-	if (abc2svg.codes[tune] == null) {
-		console.log("no codes");
-	}
-	if (abc2svg.codes[tune] != null) {
-		var keys = Object.keys(abc2svg.codes[tune]);
-		for (var i = 0; i < keys.length; i++) {
-			if (start_code != null) {
-				if (abc2svg.codes[tune][keys[i]] == start_code) {
-					var rects = div.getElementsByClassName("abcr _" + keys[i].substring(4) + "_");
-					if (rects.length == 1) {
-						start_rect = rects[0];
+	if (start_code != null) {
+		if (abc2svg.codes[tune] == null) {
+			console.log("no codes");
+		}
+		if (abc2svg.codes[tune] != null) {
+			var keys = Object.keys(abc2svg.codes[tune]);
+			for (var i = 0; i < keys.length; i++) {
+				if (start_code != null) {
+					if (abc2svg.codes[tune][keys[i]] == start_code) {
+						var rects = div.getElementsByClassName("abcr _" + keys[i].substring(4) + "_");
+						if (rects.length == 1) {
+							start_rect = rects[0];
+						}
 					}
 				}
-			}
-			if (end_code != null) {
-				if (abc2svg.codes[tune][keys[i]] == end_code) {
-					var rects = div.getElementsByClassName("abcr _" + keys[i].substring(4) + "_");
-					if (rects.length == 1) {
-						end_rect = rects[0];
+				if (end_code != null) {
+					if (abc2svg.codes[tune][keys[i]] == end_code) {
+						var rects = div.getElementsByClassName("abcr _" + keys[i].substring(4) + "_");
+						if (rects.length == 1) {
+							end_rect = rects[0];
+						}
 					}
 				}
-			}
-			if ((start_code == null || start_rect != null) && (end_code == null || end_rect != null)) {
-				break;
+				if ((start_code == null || start_rect != null) && (end_code == null || end_rect != null)) {
+					break;
+				}
 			}
 		}
+		if (start_rect == null) {
+			plan_remaining = "";
+		}
 	}
+	/*
 	if (start_rect == null) {
 		for (var sym = abc2svg.abc.tunes[tune][0]; sym.ts_next != null; sym = sym.ts_next) {
 			if (sym.type == 8 && sym.istart != null) {
@@ -3426,8 +3434,13 @@ function play_next() {
 			}
 		}
 	}
+	*/
 	end_svg = end_rect;
-    abc2svg.playsection(start_rect, end_rect, schedule_play_next);
+	if (start_rect == null) {
+		abc2svg.playsection(div.getElementsByTagName("svg")[1], null, schedule_play_next);
+	} else {
+		abc2svg.playsection(start_rect, end_rect, schedule_play_next);
+	}
 }
 
 function partCbClicked(e) {
