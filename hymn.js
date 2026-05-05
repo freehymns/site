@@ -2087,6 +2087,10 @@ function fillPresentationMusic(tryno) {
 }
 
 function selectBestLayout(tryno) {
+	if (tryno > 200) {
+		console.log("selectBestLayout failed");
+		return;
+	}
 	var div1 = document.getElementById("normal_auto_score");
 	var tune1 = get_tune(div1);
 	var music1 = get_music(tune1);
@@ -3266,17 +3270,6 @@ function reset_tune_verse(tune, verse) {
 					}
 				} else if (code != null && data.ties != null && data.ties[code] != null) {
 					var turn_on = (verse != null && data.ties[code][verse]);
-					//console.log("tie at " + code + " " + "next=ts_next: " + (sym.next == sym.ts_next));
-					/*if (code.toUpperCase() == "A4") {
-						console.log("tie at " + code + " " + "next=ts_next: " + (sym.next == sym.ts_next));
-						console.log("sym: " + sym.istart + " notes: " + (sym.notes ? sym.notes.length : ""));
-						console.log("sym.next: " + sym.next.istart + " notes: " + (sym.next.notes ? sym.next.notes.length : ""));
-						console.log("sym.next.next: " + sym.next.next.istart + " notes: " + (sym.next.next.notes ? sym.next.next.notes.length : ""));
-						console.log("sym.next.ts_next: " + sym.next.ts_next.istart + " notes: " + (sym.next.ts_next.notes ? sym.next.ts_next.notes.length : ""));
-						console.log("sym.ts_next: " + sym.ts_next.istart + " notes: " + (sym.ts_next.notes ? sym.ts_next.notes.length : ""));
-						console.log("sym.ts_next.next: " + sym.ts_next.next.istart + " notes: " + (sym.ts_next.next.notes ? sym.ts_next.next.notes.length : ""));
-						console.log("sym.ts_next.ts_next: " + sym.ts_next.ts_next.istart + " notes: " + (sym.ts_next.ts_next.notes ? sym.ts_next.ts_next.notes.length : ""));
-					}*/
 					var sign = 0;
 					if (turn_on && sym.o_dur == null) {
 						sign = 1;
@@ -3289,27 +3282,54 @@ function reset_tune_verse(tune, verse) {
 						sym.o_dur = sym.dur;
 						sym.o_pdur = sym.pdur;
 					}
+					var next_time = sym.time + sym.o_dur;
 					var tied = sym.next;
+					//if (tied.time != next_time) {
+					//	log(get_music(tune).substring(sym.istart, sym.iend));
+					//	log(get_music(tune).substring(tied.istart, tied.iend));
+					//	continue;
+					//}
+					//continue;
+					console.assert(tied.time == next_time, "Error selecting tied note");
 					sym.dur += sign * tied.dur;
 					sym.pdur += sign * tied.dur / sym.o_dur * sym.o_pdur ;
 					var next_tied_s = tied;
-					while (next_tied_s.type == tied.type && next_tied_s.time == tied.time) {
-						var same_pitch = false;
+					while (next_tied_s.ts_prev.type == sym.type && next_tied_s.ts_prev.st == sym.st && next_tied_s.ts_prev.time == next_time) {
+						console.assert(tied.time == next_time, "Todo: remove this unless there are errors");
+						next_tied_s = next_tied_s.ts_prev;
+					}
+					while (next_tied_s.type == sym.type && next_tied_s.st == sym.st && next_tied_s.time == next_time) {
+						var unmatched_pitches = (sym.notes.length != next_tied_s.notes.length);
 						for (var i = 0; i < sym.notes.length; i++) {
+							var matched = false
 							for (var j = 0; j < next_tied_s.notes.length; j++) {
-								same_pitch = true;
-								break;
+								if (next_tied_s.notes[j].pit == sym.notes[i].pit) {
+									matched = true
+									if (next_tied_s == tied) {
+										sym.notes[i].dur = sym.dur;
+										sym.notes[i].pdur = sym.pdur;
+									}
+									if (!!next_tied_s.notes[j].noplay != turn_on) {
+										next_tied_s.notes[j].noplay = turn_on;
+										//if (next_tied_s.notes.length == 1) {
+										//	next_tied_s.noplay = turn_on;
+										//}
+									}
+								}
 							}
+							unmatched_pitches = (unmatched_pitches || !matched);
 						}
-						next_tied_s.noplay = (turn_on && same_pitch);
+						next_tied_s.noplay = (turn_on && !unmatched_pitches);
 						next_tied_s = next_tied_s.ts_next;
 					}
+					
 					next_s = sym.ts_next;
-					while (next_s.type == sym.type && next_s.time == sym.time) {
+					while (next_s.type == sym.type && next_s.st == sym.st && next_s.time == sym.time) {
 						next_s.dur += sign * tied.dur;
 						next_s.pdur += sign * tied.dur / sym.o_dur * sym.o_pdur;
 						next_s = next_s.ts_next;
 					}
+					
 					if (sign < 0) {
 						sym.o_dur = null;
 						sym.o_pdur = null;
