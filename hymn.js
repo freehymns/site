@@ -121,7 +121,7 @@ var KeyboardDetected = false;
 var BotDetected = false;
 
 var Pagesize;
-var Best_layout;
+var Best_layout = null;
 var View = TEXT;
 var tempo = 100;
 var col1_dismissed = true;
@@ -738,7 +738,8 @@ function prepare_music(div, tryno) {
 	//console.log(maps);
 	
 	// Fix reprise line, if any
-	if (music.indexOf("0.~") > 0) {
+	var i = music.indexOf("0.~");
+	if (i > 0 && !isDigit(music.charAt(i-1))) {
 		var part_instruction = music.indexOf("[P:");
 		if (part_instruction > 0) {
 			var end = music.indexOf("]", part_instruction);
@@ -2026,7 +2027,7 @@ function fillPresentationMusic(tryno) {
 		console.log("fillPresentationMusic failed");
 		return;
 	}
-	if (data.presentation_music == null) {
+	if (data.presentation_music == null || Best_layout == null) {
 		log_try("fillPresentationMusic", tryno);
 		setTimeout(fillPresentationMusic, 10, (tryno == null ? 1 : tryno + 1));
 		return;
@@ -2082,7 +2083,7 @@ function fillPresentationMusic(tryno) {
 		div = document.getElementById("v" + v);
     }
 	
-	//updateView();
+	updateView();
 	//fully_loaded = true;
 }
 
@@ -2160,7 +2161,7 @@ function selectBestLayout(tryno) {
 		document.getElementById("force_space_between_words").checked = opts.forceSpaceBetweenWords;
 	}
 	
-	updateView();
+	//updateView();
 
 /*
 	for (var i = 0; i < divs.length; i++) {
@@ -2300,9 +2301,20 @@ function load_text_data(callback) {
 	if (data.text_lang == null) {
 		data.text_lang = "en";
 	}
+	i = href.indexOf("list=");
+	if (i > 0) {
+		data.playlist = href.substring(i+5, href.indexOf("&", i)).split("+");
+		data.textID = data.playlist[0];
+	}
 	i = href.indexOf("id=");
 	if (i > 0 && !fully_loaded) {
 		data.textID = href.substring(i+3, href.indexOf("&", i));
+		if (data.playlist != null) {
+			var n = parseInt(data.textID);
+			if (n > 0) {
+				data.textID = data.playlist[n-1];
+			}
+		}
 	}
 	console.assert(data.textID != null, "Can't determine hymn text file id.");
 	i = href.indexOf("var=");
@@ -2886,9 +2898,9 @@ function keyDown(ev) {
 	}
 	
 	if (!!ev.shiftKey) {
-		if (ev.keyCode == 38) {
+		if (ev.keyCode == 38) { // Up
 			changeTempo(1);
-		} else if (ev.keyCode == 40) {
+		} else if (ev.keyCode == 40) {  // Down
 			changeTempo(-1);
 		}
 	}
@@ -2902,12 +2914,33 @@ function keyDown(ev) {
 			resume();
 		}
 	}
-	if (ev.keyCode == 27) {
+	if (ev.keyCode == 27) { // Esc
 		document.getElementById("mobile_menu").style.display = NONE;
 		if (abc2svg.verse_playing == null) {
 			show_hymn_details();
 		} else {
 			resetMusic();
+		}
+	}
+	if (ev.keyCode == 120) { // F9
+		next_hymn(-1);
+		window.event.preventDefault();
+	}
+	if (ev.keyCode == 121) { // F10
+		next_hymn(1);
+		window.event.preventDefault();
+	}
+}
+
+function next_hymn(inc) {
+	if (data.playlist != null) {
+		var i = 0;
+		while (data.playlist[i] != data.textID) {
+			i++;
+		}
+		if (i + inc >= 0 && i + inc < data.playlist.length) {
+			var new_href = (window.location.href + "&").replace(/id=.*\&/, "").replace(/view=.*&/, "") + "id=" + (i + inc + 1) + "&view=" + View;
+			window.location.href = new_href;
 		}
 	}
 }
