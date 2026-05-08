@@ -1,6 +1,8 @@
 import binascii
+import codecs
 import os
 import os.path
+import re
 import shutil
 import string
 import sys
@@ -25,8 +27,9 @@ if build is None:
 if out_dir is None:
 	out_dir = ("target" if build == "all" else ".")
 
-CleanWords = str.maketrans("è“”’%-\"", "e~~~~~~")
-EndLine = str.maketrans(",;:", "...")
+SpecialE = codecs.decode(codecs.encode("è", encoding="UTF-8"), encoding=ENCODING)
+CleanWords = str.maketrans("", "", "“”’=%-\"")
+EndLine = str.maketrans("", "", ",;:.")
 PunctuationRemover = str.maketrans("", "", string.punctuation)
 
 def readfile(filename):
@@ -100,14 +103,15 @@ for hymn_file in hymn_files:
 	index = 2
 	with open(hymns_dir + "/en/" + hymn_file, encoding=ENCODING) as f:
 		line = f.readline()
-		title = line.strip()
+		title = line.translate(CleanWords).strip()
 		new_html = new_html.replace("<title>Hymn Title</title>", "<title>" + title + "</title>")
 		txt = line
 		while len(line) > 0:
 			line = f.readline()
 			txt += line
 			if first_line is None and len(line) > 2 and line.find(":@") < 0 and (not line.strip().endswith(":")):
-				first_line = line.translate(CleanWords).replace("~","").strip()
+				first_line = line.translate(CleanWords).replace(SpecialE, "e").strip()
+				first_line = re.sub(r"\(.*\)", "", first_line)
 				first_line = first_line[0:-1] + first_line[-1:].translate(EndLine).replace(".","")
 				if first_line.translate(PunctuationRemover).lower().startswith(title.translate(PunctuationRemover).lower()):
 					fl_flag = 2
@@ -184,8 +188,8 @@ with open("titles_template.html", encoding=ENCODING) as f:
 				new_line = new_line.replace("$TITLE", title);
 				if first_line_flag_by_title[title] == 1:
 					new_line = new_line.replace("span", "i")
-				elif first_line_flag_by_title[title] == 2:
-					new_line = new_line.replace("span", "b")
+				#elif first_line_flag_by_title[title] == 2:
+				#	new_line = new_line.replace("span", "b")
 				titles_html += new_line
 		else:
 			titles_html += line

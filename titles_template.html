@@ -8,9 +8,10 @@
 <link rel="icon" href="favicon.png">
 <script src="indexes.js?"></script>
 </head>
-<body onload="index_loaded()" onscroll="save_index_state()">
+<body onload="index_loaded()" onscroll="save_index_state()" style="overflow-x:hidden">
 <h3 id="index_title">Hymns</h3>
-<p>Listed by <b>Titles</b> and <i>First Lines</i></p>
+<p>Listed by Titles and <i>First Lines</i></p>
+<div style=width:40em; height:100%; overflow:none">
 <div topics="$TOPICS"><a href="$LINK"><span>$TITLE</span></a></div>
 <br>
 <br>
@@ -18,5 +19,6 @@
 <br>
 <br>
 <br>
+</div>
 </body>
 </html>
