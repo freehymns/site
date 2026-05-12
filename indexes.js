@@ -53,7 +53,7 @@ function set_topic(new_topic) {
 	if (Topic != null && Topic != "null" && Topic != "" && Topic != "all") {
 		var new_title = Topic.charAt(0).toUpperCase() + Topic.substring(1) + " Hymns";
 		document.getElementById("index_title").textContent = new_title;
-		var divs = document.getElementsByTagName("div");
+		var divs = document.getElementById("index_content").getElementsByTagName("div");
 		for (var j = 0; j < divs.length; j++) {
 			var topics = divs[j].getAttribute("topics");
 			if (topics == null || topics.toLowerCase().indexOf(Topic.toLowerCase()) < 0) {

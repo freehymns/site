@@ -427,7 +427,7 @@ function parse_text_data() {
 		}
 		var music_lines = lines[i].split("|");
 		for (var n = 0; n < music_lines.length; n++) {
-			var cleanLine = encodeSpecials(music_lines[n]).trim().replaceAll("-", "- ").replaceAll("=", "= ");
+			var cleanLine = encodeSpecials(music_lines[n]).trim().replaceAll("-", "- ").replaceAll("=", "= ").trim();
 			cleanLine = cleanLine.replaceAll(/\/:.*:\//g, "").replaceAll("/:", " /: ").replaceAll(":/", " :/ ");
 			for (var j = 0; j < cleanLine.length; j++) {
 				if (cleanLine.charAt(j) == "_" && "_ ".indexOf(cleanLine.charAt(j+1)) < 0) {
@@ -471,7 +471,15 @@ function parse_text_data() {
 						for (var v = lo; v <= hi; v++) {
 							data[type][code][v] = true;
 						}
-						word = word.replace("=", "_").replace("%", "*");
+						if (word == "%") {
+							word = "*";
+						} else {
+							if (j == words.length - 1) {
+								word = word.replace("=", "");
+							} else {
+								word = word.replace("=", "_");
+							}
+						}
 					}
 					stanza.map[code] = decodeSpecials(word, true);
 					while (word.replace("_", "") != word) {
@@ -740,13 +748,17 @@ function prepare_music(div, tryno) {
 	// Fix reprise line, if any
 	var i = music.indexOf("0.~");
 	if (i > 0 && !isDigit(music.charAt(i-1))) {
-		var part_instruction = music.indexOf("[P:");
-		if (part_instruction > 0) {
-			var end = music.indexOf("]", part_instruction);
-			var partname = music.substring(part_instruction + 3, end);
+		//var part_instruction = music.indexOf("[P:");
+		var part_label = music.indexOf("\"\u200B");
+		//if (part_instruction > 0) {
+			//var end = music.indexOf("]", part_instruction);
+			//var partname = music.substring(part_instruction + 3, end);
+		if (part_label > 0) {
+			var end = music.indexOf("\"y ", part_label);
+			var partname = music.substring(part_label + 2, end);
 			for (var i = 0; i < texts.length; i++) {
 				var partname_text = texts[i];
-				if (partname_text.textContent == partname) {
+				if (partname_text.textContent == "\u200B" + partname) {
 					partname_text.textContent = "";
 					var code = get_first_code_for_partname(partname);
 					var word_text = maps[0][code];
@@ -1640,14 +1652,16 @@ function fillBarAlignedMusic(spacing, tryno) {
 		if (code.toUpperCase() == "A1" && partname == "VERSES") {
 			partname = "VERSE nn";
 		}
-		new_music += music.substring(start, insert_points[i]) + "[P:" + partname + "]";
+		//new_music += music.substring(start, insert_points[i]) + "[P:" + partname + "]";
+		new_music += music.substring(start, insert_points[i]) + "\"\u200B" + partname + "\"y ";
 		start = insert_points[i];
 	}
 	new_music += music.substring(start);
 	
 	data.presentation_music = new_music;
 	
-	new_music = new_music.replace("[P:VERSE nn]", "");
+	//new_music = new_music.replace("[P:VERSE nn]", "");
+	new_music = new_music.replace("\"\u200BVERSE nn\"y ", "");
 
 	//var new_music = data.preprocessed_music;
 	if (opts.wordsShown == NONE) {
@@ -1718,8 +1732,10 @@ function fillLayoutMusic(spacing, tryno) {
 				}
 			}
 			if (equal_times && no_ties && sym.time > 0 && sym.time * 4 == Math.floor(sym.time * 4)) {
-				for (var i = 0; i < data.voices.length; i++) {
-					split_points.push([current_start[i], 1]);
+				if (!isDigit(music.charAt(current_start[voice] - 1))) {
+					for (var i = 0; i < data.voices.length; i++) {
+						split_points.push([current_start[i], 1]);
+					}
 				}
 			}
 			if (all_ties) {
@@ -2049,9 +2065,11 @@ function fillPresentationMusic(tryno) {
 		//console.log("on " + v);
 		var new_music = replace_words(presentation_music, data.parsed_words[v + 1], "present");
 		if (v == 0) {
-			new_music = new_music.replace("[P:VERSE nn]", "");
+			//new_music = new_music.replace("[P:VERSE nn]", "");
+			new_music = new_music.replace("\"\u200BVERSE nn\"y ", "");
 		} else {
-			new_music = new_music.replace("[P:VERSE nn]", "[P:VERSE " + v + "]");
+			//new_music = new_music.replace("[P:VERSE nn]", "[P:VERSE " + v + "]");
+			new_music = new_music.replace("\"\u200BVERSE nn\"y ", "\"\u200BVERSE " + v + "\"y ");
 		}
 		var lines = new_music.split("\n");
 		new_music = "";
@@ -3311,9 +3329,23 @@ function reset_tune_verse(tune, verse) {
 					} else {
 						continue;
 					}
+					current_symbols = [sym];
+					prev_s = sym.ts_prev;
+					while (prev_s.type == sym.type && prev_s.st == sym.st && prev_s.time == sym.time && prev_s.dur == sym.dur) {
+						console.assert(false, "Todo: remove this while loop if there are no errors");
+						current_symbols.push(prev_s);
+						prev_s = prev_s.ts_prev;
+					}
+					next_s = sym.ts_next;
+					while (next_s.type == sym.type && next_s.st == sym.st && next_s.time == sym.time && next_s.dur == sym.dur) {
+						current_symbols.push(next_s);
+						next_s = next_s.ts_next;
+					}
 					if (sign > 0) {
-						sym.o_dur = sym.dur;
-						sym.o_pdur = sym.pdur;
+						for (var i = 0; i < current_symbols.length; i++) {
+							current_symbols[i].o_dur = sym.dur;
+							current_symbols[i].o_pdur = sym.pdur;
+						}
 					}
 					var next_time = sym.time + sym.o_dur;
 					var tied = sym.next;
@@ -3324,13 +3356,39 @@ function reset_tune_verse(tune, verse) {
 					//}
 					//continue;
 					console.assert(tied.time == next_time, "Error selecting tied note");
-					sym.dur += sign * tied.dur;
-					sym.pdur += sign * tied.dur / sym.o_dur * sym.o_pdur ;
+					for (var i = 0; i < current_symbols.length; i++) {
+						current_symbols[i].dur += sign * tied.dur;
+						current_symbols[i].pdur += sign * tied.dur / sym.o_dur * sym.o_pdur ;
+					}
 					var next_tied_s = tied;
 					while (next_tied_s.ts_prev.type == sym.type && next_tied_s.ts_prev.st == sym.st && next_tied_s.ts_prev.time == next_time) {
-						console.assert(tied.time == next_time, "Todo: remove this unless there are errors");
+						console.assert(false, "Todo: remove this while loop if there are no errors");
 						next_tied_s = next_tied_s.ts_prev;
 					}
+					while (next_tied_s.type == sym.type && next_tied_s.st == sym.st && next_tied_s.time == next_time) {
+						var unmatched_pitches = false;
+						for (var i = 0; i < next_tied_s.notes.length; i++) {
+							var matched = false;
+							for (var j = 0; j < current_symbols.length; j++) {
+								for (var k = 0; k < current_symbols[j].notes.length; k++) {
+									if (current_symbols[j].notes[k].pit == next_tied_s.notes[i].pit) {
+										matched = true;
+										current_symbols[j].notes[k].dur = sym.dur;
+										current_symbols[j].notes[k].pdur = sym.pdur;
+										next_tied_s.notes[i].noplay = turn_on;
+									}
+								}
+							}
+							if (!matched) {
+								unmatched_pitches = true;
+							}
+						}
+						if (!unmatched_pitches) {
+							next_tied_s.noplay = turn_on;
+						}
+						next_tied_s = next_tied_s.ts_next;
+					}
+					/*
 					while (next_tied_s.type == sym.type && next_tied_s.st == sym.st && next_tied_s.time == next_time) {
 						var unmatched_pitches = (sym.notes.length != next_tied_s.notes.length);
 						for (var i = 0; i < sym.notes.length; i++) {
@@ -3352,20 +3410,25 @@ function reset_tune_verse(tune, verse) {
 							}
 							unmatched_pitches = (unmatched_pitches || !matched);
 						}
-						next_tied_s.noplay = (turn_on && !unmatched_pitches);
+						next_tied_s.noplay = turn_on; //(turn_on && !unmatched_pitches);
 						next_tied_s = next_tied_s.ts_next;
 					}
+					*/
 					
+					/*
 					next_s = sym.ts_next;
 					while (next_s.type == sym.type && next_s.st == sym.st && next_s.time == sym.time) {
 						next_s.dur += sign * tied.dur;
 						next_s.pdur += sign * tied.dur / sym.o_dur * sym.o_pdur;
 						next_s = next_s.ts_next;
 					}
+					*/
 					
 					if (sign < 0) {
-						sym.o_dur = null;
-						sym.o_pdur = null;
+						for (var i = 0; i < current_symbols.length; i++) {
+							current_symbols[i].o_dur = null;
+							current_symbols[i].o_pdur = null;
+						}
 					}
 				}
 			}
