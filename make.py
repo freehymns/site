@@ -13,15 +13,25 @@ ENCODING = "iso-8859-1"
 build = None
 hymns_dir = "../hymns"
 out_dir = None
+canonical_root = None
 
-if len(sys.argv) > 1 and (sys.argv[1] == "indexes" or sys.argv[1] == "all"):
-	build = sys.argv[1]
-if len(sys.argv) > 2:
-	hymns_dir = sys.argv[2]
-if len(sys.argv) > 3:
-	out_dir = sys.argv[2]
+i = 1
+while i < len(sys.argv) and sys.argv[i][0] == "-":
+	if sys.argv[i] == "-r":
+		canonical_root = sys.argv[i + 1]
+		i += 1
+	i += 1
+if len(sys.argv) > i and (sys.argv[i] == "indexes" or sys.argv[i] == "all"):
+	build = sys.argv[i]
+	if len(sys.argv) > i + 1:
+		hymns_dir = sys.argv[i + 1]
+	if len(sys.argv) > i + 2:
+		out_dir = sys.argv[i + 2]
+if build == "all" and canonical_root is None:
+	print("Please specify a canonical root, or confirm that you don't want to use by using \"-r None\"")
+	build = None
 if build is None:
-	print("Syntax: " + sys.argv[0] + " indexes|all [hymns_dir [out_dir]]")
+	print("Syntax: " + sys.argv[0] + " [-r canonical_root] indexes|all [hymns_dir [out_dir]]")
 	exit()
 	
 if out_dir is None:
@@ -69,6 +79,7 @@ hymn_html = hymn_html.replace("hymn.js?", "hymn.js?" + hymn_js_crc)
 hymn_css_crc = os.path.getmtime("hymn.css")
 hymn_css_crc = str(binascii.crc32(str(hymn_css_crc).encode()))
 hymn_html = hymn_html.replace("hymn.css?", "hymn.css?" + hymn_css_crc)
+hymn_html = re.sub(r'<!--.*?-->', '', hymn_html, flags=re.DOTALL)
 
 current_crc = str(binascii.crc32(time.ctime().encode()))
 
@@ -91,9 +102,15 @@ for hymn_file in hymn_files:
 
 	hymn_id = hymn_file.split("/")[1].split(".")[0]
 	hymn_ids.append(hymn_id)
-	new_html = hymn_html.replace('//data.textID = ""', 'data.textID = "' + hymn_id + '"')
+	
+	new_html = hymn_html
+	new_html = new_html.replace('//data.textID = ""', 'data.textID = "' + hymn_id + '"')
 	new_html = new_html.replace('<a id="download_text" href="tbd', '<a id="download_text" href="' + '../hymns/en/' + hymn_file)
 	new_html = new_html.replace("titles.html?", "titles.html?" + current_crc)
+	
+	if canonical_root is not None:
+		i = new_html.find("<script")
+		new_html = new_html[:i] + '<link rel="canonical" href="' + canonical_root + '/en/' + hymn_file.split(".")[0] + '.html"/>\n' + new_html[i:]
 
 	tune_id = None
 	topics_by_id[hymn_id] = []
@@ -198,6 +215,9 @@ with open("titles_template.html", encoding=ENCODING) as f:
 indexes_js_crc = os.path.getmtime("indexes.js")
 indexes_js_crc = str(binascii.crc32(str(indexes_js_crc).encode()))
 titles_html = titles_html.replace("indexes.js?", "indexes.js?" + indexes_js_crc)
+if canonical_root is not None:
+	i = titles_html.find("<script")
+	titles_html = titles_html[:i] + '<link rel="canonical" href="' + canonical_root + '/titles.html"/>\n' + titles_html[i:]
 
 index_file = out_dir + "/" + "titles.html"
 with open(index_file, "w", encoding=ENCODING) as out:
@@ -207,6 +227,9 @@ with open(index_file, "w", encoding=ENCODING) as out:
 if build == "all":
 	index_html = readfile("index.html")
 	index_html = index_html.replace("titles.html?", "titles.html?" + current_crc + "&")
+	if canonical_root is not None:
+		i = index_html.find("<script")
+		index_html = index_html[:i] + '<link rel="canonical" href="' + canonical_root + '"/>\n' + index_html[i:]
 	index_file = out_dir + "/" + "index.html"
 	with open(index_file, "w", encoding=ENCODING) as out:
 		out.write(index_html);

@@ -59,7 +59,11 @@ const FIELD_NAME_LIMIT = 13;
 const FIELD_VALUE_LIMIT = 24;
 const RADIO_VALUE_LIMIT = 32;
 
+const DEFAULT_TEMPO = 100;
+
 const NULL_ABC = "X:1\nK:C\nV:1\nz";
+
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 const BOTS = [/bot/i,/spider/i,/crawler/i,/Google-InspectionTool/,/GoogleOther/,/Slurp/,/Teoma/,/speedy/,/Qwantify/,/Seekport/,/search\.marginalia\.nu/,/webzio\s/,/GeedoProductSearch/];
 
@@ -123,7 +127,7 @@ var BotDetected = false;
 var Pagesize;
 var Best_layout = null;
 var View = TEXT;
-var tempo = 100;
+var tempo = DEFAULT_TEMPO;
 var col1_dismissed = true;
 var col2_dismissed = true;
 var col3_dismissed = false;
@@ -570,7 +574,7 @@ function parse_text_data() {
 					if (data[type][key][v] == null) {
 						data[type][key][v] = data[type][key][0];
 					}
-				}
+				}/*
 				var code;
 				if (key.toUpperCase() == key) {
 					code = key.toLowerCase();
@@ -583,7 +587,7 @@ function parse_text_data() {
 				}
 				if (!code_found) {
 					data[type][code] = data[type][key];
-				}
+				}*/
 			}
 		}
 	}
@@ -778,12 +782,12 @@ function prepare_music(div, tryno) {
 					//var word = s.substring(s.indexOf("0."));
 					//var letter_width = width / word.length;
 					if (code == "A1") {
-						var new_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+						var new_text = document.createElementNS(SVG_NS, "text");
 						new_text.setAttribute("class", word_text.getAttribute("class"));
 						//new_text.setAttribute("x", word_x - letter_width * (partname.length));
 						new_text.setAttribute("x", "25");
 						new_text.setAttribute("y", word_text.getAttribute("y"));
-						var tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+						var tspan = document.createElementNS(SVG_NS, "tspan");
 						tspan.setAttribute("font-style", "italic");
 						tspan.appendChild(document.createTextNode(partname.charAt(0) + partname.substring(1).toLowerCase() + ":"))
 						new_text.appendChild(tspan);
@@ -795,7 +799,7 @@ function prepare_music(div, tryno) {
 							for (code in data.stanzas[j].map) {
 								word_text = maps[0][code];
 								if (word_text != null) {
-									var tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+									var tspan = document.createElementNS(SVG_NS, "tspan");
 									tspan.setAttribute("font-style", "italic");
 									tspan.textContent = word_text.textContent;
 									word_text.textContent = "";
@@ -807,7 +811,7 @@ function prepare_music(div, tryno) {
 /*					
 					for (var e = word_text; e != null; e = e.nextElementSibling) {
 						if (e.tagName == "text") {
-							tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+							tspan = document.createElementNS(SVG_NS, "tspan");
 							tspan.setAttribute("font-style", "italic");
 							tspan.textContent = e.textContent;
 							e.textContent = "";
@@ -1446,7 +1450,9 @@ function parse_music_data() {
 	    new_music += lines[i] + "\n";
 	  }
 	}
-	
+
+	//new_music = new_music.replaceAll("!fermata!", "");
+
 	new_music = new_music.replaceAll("!sp!y", "");
 	new_music = new_music.replaceAll(/\"Refrain\"\s+y/ig, "");
 	//new_music = new_music.replaceAll("||", "|");
@@ -1525,14 +1531,13 @@ function replace_words(music, new_words, wordSpacing) {
 	for (var i = 0; i < lines.length; i++) {
 		var continuation = (lines[i].substring(0,2) == "+:");
 		if (lines[i].substring(0,2) == "w:" && !continuation) {
-			if (new_words != null) {
+			if (new_words != null && word_line_no < new_words.length) {
 				var word_lines = new_words[word_line_no].split("\n");
 				for (var j = 0; j < word_lines.length - 1; j++) {
 					new_music += word_lines[j].substring(0,2) + addSpaces(word_lines[j].substring(2), wordSpacing) + "\n";
 				}
-			}
-			if (!word_line && new_words == "") {
-				new_music += "w:\u200B\n";
+			} else if (!word_line) {
+				new_music += "w:\n";
 			}
 			word_line = true;
 			word_line_no++;
@@ -1627,6 +1632,7 @@ function fillBarAlignedMusic(spacing, tryno) {
 	
 	var unique_partnames = Object.keys(codes);
 	var insert_points = [];
+	var insert_parts = [];
 	var abcr_names = Object.keys(abc2svg.codes[tune]);
 	for (i = 0; i < unique_partnames.length; i++) {
 		var code = codes[unique_partnames[i]].toSorted()[0];
@@ -1639,6 +1645,7 @@ function fillBarAlignedMusic(spacing, tryno) {
 		}
 		if (pos < 99999) {
 			insert_points.push(pos);
+			insert_parts.push(unique_partnames[i]);
 		}
 	}
 	
@@ -1646,9 +1653,9 @@ function fillBarAlignedMusic(spacing, tryno) {
 	
 	var new_music = "";
 	var start = 0;
-	for (i = 0; i < unique_partnames.length; i++) {
-		var code = codes[unique_partnames[i]].toSorted()[0];
-		var partname = unique_partnames[i].toUpperCase();
+	for (i = 0; i < insert_parts.length; i++) {
+		var code = codes[insert_parts[i]].toSorted()[0];
+		var partname = insert_parts[i].toUpperCase();
 		if (code.toUpperCase() == "A1" && partname == "VERSES") {
 			partname = "VERSE nn";
 		}
@@ -2101,6 +2108,7 @@ function fillPresentationMusic(tryno) {
 		div = document.getElementById("v" + v);
     }
 	
+	fillPerformancePlan();
 	updateView();
 	//fully_loaded = true;
 }
@@ -2225,6 +2233,8 @@ function page_loaded() {
 			break;
 		}
 	}
+	
+	fill_loading_indicator();
 
 	if (!BotDetected) {
 		var query = window.location.search.toLowerCase();
@@ -2287,6 +2297,44 @@ function music_data_loaded() {
 	displayMusic();
 }
 
+function fill_loading_indicator() {
+	var svg = document.createElementNS(SVG_NS, "svg");
+	svg.setAttribute("viewBox", "0 0 100 100");
+	svg.setAttribute("preserveAspectRatio", "xMidYMid");
+	svg.setAttribute("width", "200");
+	svg.setAttribute("height", "200");
+	svg.setAttribute("style", "shape-rendering: auto; display: block");
+	svg.style.shapeRendering = "auto";
+	svg.style.display = "block";
+	var container = document.createElementNS(SVG_NS, "g");
+	for (var i = 0; i < 360; i += 30) {
+		var g = document.createElementNS(SVG_NS, "g");
+		g.setAttribute("transform", "rotate(" + i + " 50 50)")
+		var rect = document.createElementNS(SVG_NS, "rect");
+		rect.setAttribute("fill", "#fe718d");
+		rect.setAttribute("height", "12");
+		rect.setAttribute("width", "6");
+		rect.setAttribute("ry", "6");
+		rect.setAttribute("rx", "3");
+		rect.setAttribute("y", "24");
+		rect.setAttribute("x", "47");
+		var a = document.createElementNS(SVG_NS, "animate");
+		a.setAttribute("repeatCount", "indefinite");
+		a.setAttribute("begin", ((i - 330) / 360) + "s");
+		a.setAttribute("dur", "1s");
+		a.setAttribute("keyTimes", "0;1");
+		a.setAttribute("values", "1;0");
+		a.setAttribute("attributeName", "opacity");
+		rect.appendChild(a);
+		g.appendChild(rect);
+		container.appendChild(g);
+	}
+	svg.appendChild(container);
+
+	document.getElementById("loading").appendChild(svg);
+}
+
+
 function get_folder_name(filename) {
 	if (filename.charAt(0) == "A" && filename.charAt(1) == filename.charAt(1).toUpperCase()) {
 		return "an";
@@ -2340,7 +2388,7 @@ function load_text_data(callback) {
 		data.text_variant = href.substring(i+4, href.indexOf("&", i));
 	}
 	var url = "../";
-	if (href.indexOf("/site") >= 0) {
+	if (href.indexOf("/site") >= 0 && href.indexOf("/target") < 0) {
 		url += "../";
 	}
 	url += "hymns/" + data.text_lang + "/" + get_folder_name(data.textID) + "/" + data.textID + ".txt";
@@ -2391,7 +2439,7 @@ function load_music_data(callback) {
 	}
 
 	var url = "../";
-	if (href.indexOf("/site") >= 0) {
+	if (href.indexOf("/site") >= 0 && href.indexOf("/target") < 0) {
 		url += "../";
 	}
 	url += "hymns/music/" + get_folder_name(data.musicID) + "/" + data.musicID + ".abc";
@@ -3189,7 +3237,8 @@ function changeTempo(amount) {
 	tempo += amount;
 	Tempo_value.textContent = tempo;
 	if (abcplay) {
-		abcplay.set_speed(tempo / data.music_fields[TEMPO][0]);
+		var speed = tempo / (data.music_fields[TEMPO] == null ? DEFAULT_TEMPO : data.music_fields[TEMPO][0]);
+		abcplay.set_speed(speed);
 	}
 }
 
@@ -3214,12 +3263,19 @@ function calc_follow_speed() {
 }
 
 function calc_plan() {
+	var div = document.getElementById("v0");
+	var tune = get_tune(div);
+	if (tune == null) {
+		return "0";
+	}
+	var codes = Object.values(abc2svg.codes[tune]);
 	maxLetter = "A";
 	for (var i = 0; i < data.stanzas.length; i++) {
 		var keys = Object.keys(data.stanzas[i].map);
 		for (var j = 0; j < keys.length; j++) {
-			if (keys[j].charAt(0).toUpperCase() > maxLetter) {
-				maxLetter = keys[j].charAt(0).toUpperCase();
+			var letter = keys[j].charAt(0).toUpperCase();
+			if (letter > maxLetter && codes.includes(letter + "1")) {
+				maxLetter = letter;
 			}
 		}
 	}
@@ -3320,6 +3376,11 @@ function reset_tune_verse(tune, verse) {
 						next_s = next_s.ts_next;
 					}
 				} else if (code != null && data.ties != null && data.ties[code] != null) {
+					var code_count = (data.ties[code.toUpperCase()] == null ? 0 : 1) + (data.ties[code.toLowerCase()] == null ? 0 : 1);
+					var st_mult = code_count - 1;
+					//if (code == "d1" || code == "D1") {
+					//	log(code + " " + sym.time);
+					//}
 					var turn_on = (verse != null && data.ties[code][verse]);
 					var sign = 0;
 					if (turn_on && sym.o_dur == null) {
@@ -3331,13 +3392,13 @@ function reset_tune_verse(tune, verse) {
 					}
 					current_symbols = [sym];
 					prev_s = sym.ts_prev;
-					while (prev_s.type == sym.type && prev_s.st == sym.st && prev_s.time == sym.time && prev_s.dur == sym.dur) {
+					while (prev_s.type == sym.type && prev_s.st*st_mult == sym.st*st_mult && prev_s.time == sym.time && prev_s.dur == sym.dur) {
 						console.assert(false, "Todo: remove this while loop if there are no errors");
 						current_symbols.push(prev_s);
 						prev_s = prev_s.ts_prev;
 					}
 					next_s = sym.ts_next;
-					while (next_s.type == sym.type && next_s.st == sym.st && next_s.time == sym.time && next_s.dur == sym.dur) {
+					while (next_s.type == sym.type && next_s.st*st_mult == sym.st*st_mult && next_s.time == sym.time && next_s.dur == sym.dur) {
 						current_symbols.push(next_s);
 						next_s = next_s.ts_next;
 					}
@@ -3361,11 +3422,11 @@ function reset_tune_verse(tune, verse) {
 						current_symbols[i].pdur += sign * tied.dur / sym.o_dur * sym.o_pdur ;
 					}
 					var next_tied_s = tied;
-					while (next_tied_s.ts_prev.type == sym.type && next_tied_s.ts_prev.st == sym.st && next_tied_s.ts_prev.time == next_time) {
+					while (next_tied_s.ts_prev.type == sym.type && next_tied_s.ts_prev.st*st_mult == sym.st*st_mult && next_tied_s.ts_prev.time == next_time) {
 						console.assert(false, "Todo: remove this while loop if there are no errors");
 						next_tied_s = next_tied_s.ts_prev;
 					}
-					while (next_tied_s.type == sym.type && next_tied_s.st == sym.st && next_tied_s.time == next_time) {
+					while (next_tied_s.type == sym.type && next_tied_s.st*st_mult == sym.st*st_mult && next_tied_s.time == next_time) {
 						var unmatched_pitches = false;
 						for (var i = 0; i < next_tied_s.notes.length; i++) {
 							var matched = false;
