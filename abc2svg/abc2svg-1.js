@@ -603,7 +603,9 @@ var decos = {
 	"tie(": "44 0 0 0 0",
 	"tie)": "44 0 0 0 0",
 	fg: "45 0 0 0 0",
-	hid: "46 0 0 0 0"},
+	hid: "46 0 0 0 0",
+	grace: "47 0 0 0 0",
+	silent: "48 0 0 0 0"},
 
 	// types of decoration per function
 	f_near = [
@@ -1129,7 +1131,7 @@ function deco_def(nm, nmd) {
 		return //undefined
 	}
 	if (c_func > 10
-	 && (c_func < 32 || c_func > 46)) {
+	 && (c_func < 32 || c_func > 48)) {
 		error(1, null, "%%deco: bad C function index '$1'", c_func)
 		return //undefined
 	}
@@ -1511,6 +1513,10 @@ function deco_cnv(s, prev) {
 			continue
 		case 46:
 			s.hid = true
+		case 47:
+			s.gracelike = true
+		case 48:
+			s.noplay = true
 //		default:
 //			break
 		}
@@ -1581,6 +1587,10 @@ function dh_cnv(s, nt) {
 			continue
 		case 46:
 			nt.hid = true
+		case 47:
+			nt.gracelike = true
+		case 48:
+			nt.noplay = true
 		}
 
 		// add the decoration in the note
@@ -4232,7 +4242,7 @@ function draw_basic_note(s, m, y_tb) {
 	/* draw the head */
 	if (note.invis) {
 		;
-	} else if (s.grace) {			// don't apply %%map to grace notes
+	} else if (s.grace || s.gracelike) {			// don't apply %%map to grace notes
 		p = "ghd";
 		x_note -= 4.5 * stv_g.scale
 	} else if (note.map && note.map[0]) {
@@ -4354,9 +4364,9 @@ function draw_note(s,
 				else
 					slen += 1
 			}
-			out_stem(x, y, slen, s.grace)
+			out_stem(x, y, slen, s.grace || s.gracelike)
 		} else {				/* stem and flags */
-			out_stem(x, y, slen, s.grace,
+			out_stem(x, y, slen, s.grace || s.gracelike,
 				 nflags, s.fmt.straightflags)
 		}
 	} else if (s.xstem) {				/* cross-staff stem */
@@ -4372,7 +4382,7 @@ function draw_note(s,
 			x1 = x;
 		slen = 3 * (s.notes[s.stem > 0 ? s.nhd : 0].pit - 18)
 		if (s.head == C.FULL || s.head == C.EMPTY) {
-			x1 += (s.grace ? GSTEM_XOFF : 3.5) * s.stem
+			x1 += (s.grace || s.gracelike ? GSTEM_XOFF : 3.5) * s.stem
 			if (s.stem > 0)
 				slen += 6 + 5.4 * ntrem
 			else
