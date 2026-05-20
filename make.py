@@ -8,7 +8,8 @@ import string
 import sys
 import time
 
-ENCODING = "iso-8859-1"
+#ENCODING = "iso-8859-1"
+ENCODING = "utf-8"
 
 build = None
 hymns_dir = "../hymns"
@@ -37,16 +38,33 @@ if build is None:
 if out_dir is None:
 	out_dir = ("target" if build == "all" else ".")
 
-SpecialE = codecs.decode(codecs.encode("è", encoding="UTF-8"), encoding=ENCODING)
-CleanWords = str.maketrans("", "", "“”’=%-\"")
-EndLine = str.maketrans("", "", ",;:.")
-PunctuationRemover = str.maketrans("", "", string.punctuation)
+SpecialE = "\u00E8"
+SpecialPunctuation = "\u2019\u201B\u201C\u201D"
+CleanWords = str.maketrans("", "", "=%-\"")
+PunctuationRemover = str.maketrans("", "", string.punctuation + SpecialPunctuation)
+
+def remove_punc(s):
+	return s.translate(PunctuationRemover)
 
 def readfile(filename):
 	content = ""
-	with open(filename, encoding=ENCODING) as f:
-		for line in f.readlines():
-			content += line
+	try:
+		with open(filename, encoding="utf-8") as f:
+			for line in f.readlines():
+				content += line
+	except UnicodeDecodeError as err:
+		with open(filename, mode="rb") as f:
+			data = f.read(err.start)
+			lineno = 1
+			pos = 1
+			for i in range(len(data)):
+				if data[i] == 10:
+					lineno += 1
+					pos = 0
+				pos += 1
+		print("\nError on line " + str(lineno) + ", col " + str(pos) + " of " + filename)
+		print("Convert the file to UTF-8\n")
+		exit()
 	return content
 
 def get_dirname(id):
@@ -120,7 +138,8 @@ for hymn_file in hymn_files:
 	index = 2
 	with open(hymns_dir + "/en/" + hymn_file, encoding=ENCODING) as f:
 		line = f.readline()
-		title = line.translate(CleanWords).strip()
+		title = line.translate(CleanWords).replace(SpecialE, "e").strip()
+		title = remove_punc(title[0]) + title[1:-1] + remove_punc(title[-1:])
 		new_html = new_html.replace("<title>Hymn Title</title>", "<title>" + title + "</title>")
 		txt = line
 		while len(line) > 0:
@@ -128,9 +147,9 @@ for hymn_file in hymn_files:
 			txt += line
 			if first_line is None and len(line) > 2 and line.find(":@") < 0 and (not line.strip().endswith(":")):
 				first_line = line.translate(CleanWords).replace(SpecialE, "e").strip()
-				first_line = re.sub(r"\(.*\)", "", first_line)
-				first_line = first_line[0:-1] + first_line[-1:].translate(EndLine).replace(".","")
-				if first_line.translate(PunctuationRemover).lower().startswith(title.translate(PunctuationRemover).lower()):
+				#first_line = re.sub(r"\(.*\)", "", first_line)
+				first_line = remove_punc(first_line[0]) + first_line[1:-1] + remove_punc(first_line[-1:])
+				if remove_punc(first_line).lower().startswith(remove_punc(title).lower()):
 					fl_flag = 2
 				else:
 					fl_flag = 1
